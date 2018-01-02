@@ -51,6 +51,16 @@
             box-shadow: 0 1px 6px rgba(0, 0, 0, 0.175);
         }
 
+				.timeline > li > .timeline-panel-hidden {
+						visibility: hidden;
+						height: 50px;
+				}
+
+				.timeline > li > .timeline-badge:hover + .timeline-panel-hidden {
+						visibility: visible;
+						height: 100%;
+				}
+
             .timeline > li > .timeline-panel:before {
                 position: absolute;
                 top: 26px;
