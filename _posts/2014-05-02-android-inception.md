@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "Android Inception: a remote controller app"
-date:   2014-03-08 12:21:59 -0500
+date:   2014-05-02 12:21:59 -0500
 categories: android remote
 ---
 
