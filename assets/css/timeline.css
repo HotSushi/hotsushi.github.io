@@ -2,8 +2,7 @@
     list-style: none;
     padding: 20px 0 20px;
     position: relative;
-    width: 70%;
-    float:left;
+    width: 120%;
 }
 
     .timeline:before {
