@@ -4,12 +4,15 @@ title:  "What went wrong with my Facebook interview!"
 date:   2018-01-08 12:21:59 -0500
 categories: facebook interview
 ---
+# Plot Twist: I cleared this Round
+Sorry, about the misleading title. I was so sure I wasn't going to clear this round, but I did. I wrote this blog on the very day of my interview, frustrated with my performance.. Enjoy the rant!
+
 **Company** | Facebook
 **Position** | Intern - Production Engineer
 **Interviewer** | :star::star::star::star:/5
 **Time** | 45 Minutes
 **Rounds** | 1
-**Offer**  | Of course not! :sob:
+**Offer**  | Maybe
 **NDA** | No
 
 ## Mistake 1: Mind the role
