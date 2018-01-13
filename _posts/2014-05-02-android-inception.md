@@ -20,6 +20,6 @@ I preferred Java on remote server (your PC) because it has a common VM for linux
 When I was browsing through Java library, I came across an awesome class `Robot`. Its functionality is as cool as its name , It can simulate mouse movement and key presses.
 I already knew **making connection with a remote computer** , **sending data** and Robot class gave me the freedom to control my computer with my tablet. I implemented it , and here’s the output..
 
-<iframe width="420" height="315" src="http://www.youtube.com/embed/IG2jsOm6hJI" frameborder="0" allowfullscreen></iframe>
+<iframe width="420" height="315" src="https://www.youtube.com/embed/IG2jsOm6hJI" frameborder="0" allowfullscreen></iframe>
 
 I continued working on this project for 2-3 months and added features like automatic server detection (requires UDP broadcasting), Bluetooth support and what not!
