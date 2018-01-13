@@ -35,7 +35,7 @@ I studied blender’s documentation and followed their video tutorials. Found a 
 It took me nearly 2 months to finish my first Project-level application.
 And I was happy with the output…
 
-<iframe width="420" height="315" src="http://www.youtube.com/embed/P6g6Wfi70og" frameborder="0" allowfullscreen></iframe>
+<iframe width="420" height="315" src="https://www.youtube.com/embed/P6g6Wfi70og" frameborder="0" allowfullscreen></iframe>
 
 you can [get the game here]({{ "/assets/my-first-project/FPS.zip" | absolute_url }}).
 
