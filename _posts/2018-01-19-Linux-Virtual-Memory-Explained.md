@@ -132,6 +132,53 @@ categories: Linux Virtual Memory
 Watch this video which explains swapping.
 <iframe width="560" height="315" src="https://www.youtube.com/embed/EWwfMM2AW9g?start=41.8&end=42.2" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
 
+# Interrupts
+- CPUs rely on pre-filled registers to correctly handle interrupts. CPU h/w does exact same thing for each interrupt (allowing os to take control away from user process).
+  - Process Control Block register: contains a pointer to PCB of current running process.
+  - Interrupt handler register: contains pointer to a table containing pointers to instructions in OS kernel for interrupt handlers and system calls. (This value is set at boot time)
+- H/W tells CPU that there is interrupt at end of each cycle (IRQ line). S/W interrupt executes an interrupt assembly language instruction. The following actions occur.
+  - Current register values are saved
+  - CPU mode bit is set to kernel Mode
+  - Interrupt handler table pointer and Interrupt Vector is used to determine kernel code to be executed.
+  - Kernel Code is executed.
+
+## Process Scheduling
+![Scheduling]({{ "/assets/linux-virtual-memory/process_switching.png" | absolute_url }})
+- There is a timer hardware
+  - listens to CPU clock
+  - Periodically gives out signal (Interrupt) (configurable at boot time)
+- The timer interrupt handler
+  - Determines how long the current process has been running on the CPU and preempts it if it has exceeded the time allocated to it.
+
+# Context Switching
+CPU h/w supports kernel mode (Can execute all machine instructions and refer all memory locations) and user mode.
+
+Two Parts, 1) Kernel Entry/ Exit Mechanism, for switching to User Mode or Kernel Mode 2) Context Switch Mechanism, for switching in kernel-mode from running in the context of one process/thread to another.
+
+## Mode Switch
+- Switching happens When
+  1. Fault (page fault/ exception from instruction)
+  2. Interrupt (Keyboard or IO finishing)
+  3. Trap (a system call)
+- Each user thread has user-mode stack and kernel-mode stack.
+- When a process is running in kernel mode, its basically running on this stack. (Some CPUs automatically switch the correct Stack Pointer)
+- When a thread enters the kernel
+  - The user-mode stack value and instruction pointer is saved on thread's kernel-mode stack (just the minimal details, if more needed interrupt handler will take care)
+  - CPU can then switch to other thread manually if required by
+    - executing 'int 0x80'
+    - This generates interrupt and interrupt service routine is called
+    - Interrupt service routine is executed in ring 0.
+
+## Process switching
+- If interrupt handle decides to change the process
+  - It saves current register state of the process into **Process context block**
+  -  Executes instruction to load the process context of new process.
+
 # Source:
 This notes are based on following sources:
   - [Introduction to Memory Management in Linux by Alan Ott]( https://www.youtube.com/watch?time_continue=772&v=EWwfMM2AW9g)
+  - [Interrupts](http://faculty.salina.k-state.edu/tim/ossg/Introduction/OSworking.html)
+  - [Context Switch internals](https://stackoverflow.com/questions/12630214/context-switch-internals?rq=1)
+  - [Kernel stack Usage](https://stackoverflow.com/questions/30419872/what-is-a-kernel-stack-used-for)
+  - [Sysenter](http://articles.manugarg.com/systemcallinlinux2_6.html)
+  - [CPU switches from User mode to kernel Mode](https://stackoverflow.com/questions/2479118/cpu-switches-from-user-mode-to-kernel-mode-what-exactly-does-it-do-how-does-i)
