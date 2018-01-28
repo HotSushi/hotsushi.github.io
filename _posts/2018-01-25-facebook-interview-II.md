@@ -14,6 +14,10 @@ categories: facebook systems
 **NDA** | No
 
 {% include toc.html %}
+## Preparation
+2 Weeks of in-depth preparation of Linux +  Operating Systems + Networks.
+[Linux SysAdmin Github Academy](https://github.com/chassing/linux-sysadmin-interview-questions)  was my primary guide.
+ - My solutions can be found in this [fork](https://github.com/HotSushi/linux-sysadmin-interview-questions)
 
 ## What happens when a linux system boots?
 My Answer:
