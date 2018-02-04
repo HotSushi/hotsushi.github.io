@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "Lyx: let's make it distributed"
-date:   2018-01-25 12:21:59 -0500
+date:   2018-02-03 12:21:59 -0500
 categories: lyx distributed systems gsoc
 ---
 ## Introduction
