@@ -1,0 +1,2066 @@
+diff --git a/lib/ui/stdtoolbars.inc b/lib/ui/stdtoolbars.inc
+index 163beab..c77308c 100644
+--- a/lib/ui/stdtoolbars.inc
++++ b/lib/ui/stdtoolbars.inc
+@@ -76,6 +76,7 @@ ToolbarSet
+ 		Item "Check spelling" "dialog-show spellchecker"
+ 		Item "Spellcheck continuously" "spelling-continuously"
+ 		Separator
++		Item "Pull" "collaborate-pull"
+ 		Item "Undo" "undo"
+ 		Item "Redo" "redo"
+ 		Item "Cut" "cut"
+diff --git a/src/BufferView.cpp b/src/BufferView.cpp
+index faa08f0..fa2176b 100644
+--- a/src/BufferView.cpp
++++ b/src/BufferView.cpp
+@@ -52,6 +52,7 @@
+ #include "TexRow.h"
+ #include "TocBackend.h"
+ #include "WordLangTuple.h"
++#include "LFUNHolder.h"
+ 
+ #include "insets/InsetBibtex.h"
+ #include "insets/InsetCitation.h"
+@@ -97,6 +98,14 @@ namespace Alert = frontend::Alert;
+ 
+ namespace {
+ 
++struct HistoryQEntry{
++	FuncRequest LFUN;
++	DocIterator diff;
++	DocIterator CursorLocation;
++	DocIterator Anchor;
++	int client_id;
++};
++
+ /// Return an inset of this class if it exists at the current cursor position
+ template <class T>
+ T * getInsetByCode(Cursor const & cur, InsetCode code)
+@@ -295,12 +304,219 @@ struct BufferView::Private
+ 
+ 	///
+ 	map<string, Inset *> edited_insets_;
+-};
++///
++	int client_id;
++        ///
++        Socket sock_;
++        ///
++        SocketConnection *p_conn_;
++        /// Whether the p_conn_ is a client-side or server-side connection
++        bool client_conn_;
++        ///
++        QTimer timer_;
++        /// 
++        vector<BufferView *> remote_views_;
++
++        /// Send to all remote_views_ except the one with connection p_excl_conn
++        void send(FuncRequest const & cmd, SocketConnection *p_excl_conn = 0);
++        ///
++        int try_recv(FuncRequest & cmd, int & target_version , DocIterator & docit_ ,DocIterator & anchor_ , string & str);
++
++
++	// not to be used in local BufferView
++	int remote_version;
++	
++	//// Versioning
++	/// HistoryQ
++	map <int, HistoryQEntry> HistoryQ;
++	
++	///  insert <LFUN> into HistoryQ 
++	void historyQInsert(FuncRequest const & LFUN, DocIterator diff, DocIterator anchor,DocIterator cursor, int client_id );
++	
++	void adjustCursor(DocIterator & cursor, int client_id, int version = 0);
++
++	void historyQDisplay();
++	
++
++ };
++ 
++void BufferView::Private::historyQInsert(FuncRequest const & LFUN, DocIterator diff, DocIterator anchor ,DocIterator cursor, int client_id ) {
++
++
++	map<int, HistoryQEntry>::const_iterator it = HistoryQ.begin();
++	for(; it != HistoryQ.end(); ++it){
++		if(cursor < it -> second.CursorLocation || cursor / it -> second.CursorLocation)
++			HistoryQ[it -> first].CursorLocation.addDiff(cursor, diff, it -> second.client_id < client_id );
++	}
++
++	HistoryQEntry e = {LFUN, diff, anchor, cursor, client_id};
++	int idx = 0;
++	if(HistoryQ.size())
++		idx = HistoryQ.rbegin()->first + 1;
++
++	HistoryQ.insert( pair<int, HistoryQEntry> (idx, e) );
++
++}
++
++void BufferView::Private::adjustCursor(DocIterator & cursor, int client_id, int version ) {
++
++	DocIterator comparator = cursor;
++	
++	
++
++	map<int, HistoryQEntry>::const_iterator it = HistoryQ.find(version);
++
++	map<int, HistoryQEntry>::iterator itr = HistoryQ.begin();
++	while (itr != HistoryQ.end()) {
++	    if (itr->first < version) {
++	       HistoryQ.erase(itr++);
++	    } else {
++	       ++itr;
++	    }
++	}	
++
++	if(it != HistoryQ.end())
++		++it;
++	for(; it != HistoryQ.end(); ++it){
++		LYXERR(Debug::ACTION,"going through version" << it->first);
++		if(it -> second.client_id != client_id){
++			if(cursor > it -> second.CursorLocation || cursor / it -> second.CursorLocation)
++			{	printf("cursor ahead of begining\n");
++				// If No selection Involved
++				if(it -> second.Anchor.empty())	{printf("anchor empty\n");
++					cursor.addDiff(it -> second.CursorLocation, it -> second.diff, client_id < it -> second.client_id  );}
++				else// if selection involved
++					{
++					// 3 cases: before selection, after selection, in between selection
++						if(cursor < it -> second.Anchor)
++						{
++							printf("cursor before anchor\n");
++							DocIterator emptydoc;
++							cursor = emptydoc;
++							break; 	
++						}						
++						else
++						{printf("cursor after anchor\n");	
++							// subtract pit
++							cursor.pit() -=(it -> second.Anchor - it -> second.CursorLocation).pit();
++							int adjust_factor;
++							adjust_factor = it -> second.CursorLocation.pos() - it -> second.Anchor.pos() +  it -> second.diff.pos();
++							cursor.pos() += adjust_factor;
++							
++						}
++					}					
++			}
++		}
++	}
++	cursor.sanitize();
++	
++	
++}
++
++void BufferView::Private::historyQDisplay() {
++
++	ostringstream oss;
++	oss << "\n version : LFUN : cursorLocation :Anchor: diff : client\n";
++	map<int, HistoryQEntry>::const_iterator it = HistoryQ.begin();
++	for(; it != HistoryQ.end(); ++it){
++	oss << it -> first << ":" << it -> second.LFUN.getArg(0) 
++	<< ":" << it -> second.CursorLocation 
++	<< ":" << it -> second.Anchor 
++	<< ":" << it -> second.diff 
++	<< ":" << it -> second.client_id << "\n";
++	} 	
++	
++	LYXERR(Debug::ACTION, oss.str()); 
++}
++
++void BufferView::Private::send(FuncRequest const & cmd, SocketConnection *p_excl_conn) {
++      	
++	LFUNHolder lh;
++
++	lh.attach_LFUN(cmd);
++	//my local version after dispatching
++	int max_idx = 0;
++	if(HistoryQ.size())
++		max_idx = HistoryQ.rbegin()->first + 1;
++	lh.attach_rversion(max_idx);
++		
++	DocIterator docit_= cursor_;
++	lh.attach_DocIt(docit_);
++	if(cursor_.selection()){
++		DocIterator anchor_= cursor_.realAnchor();
++		lh.attach_Anchor(anchor_);
++	}
++	
++
++        vector<BufferView *>::const_iterator it = remote_views_.begin();
++        for (; it != remote_views_.end(); ++it) {
++		
++		// each client will have differnet latest version
++		vector<unsigned char> v;
++		lh.attach_version((*it)->d->remote_version);		
++		v = lh.serialize();
++
++		//printf("This LFUN is targeted at version %d",(*it)->d->remote_version);
++
++		if ((*it)->d->p_conn_ == p_excl_conn)
++                        continue;
++                //printf("Sending chunk of %lu bytes (%ld)\n", v.size(), v.end()-v.begin());
++                if ((*it)->d->p_conn_->send_chunk(v) != 0) {
++                        delete (*it)->d->p_conn_;
++                        (*it)->d->p_conn_ = 0;
++                        delete *it;
++                        cursor_.bv().message(_("Lost connection!"));
++                }
++        }
++     
++}
++
++
++int BufferView::Private::try_recv(FuncRequest & cmd, int & version , DocIterator & docit_ , DocIterator & anchor_ , string & str_) {
++
++        vector<unsigned char> v;
++        int rv = p_conn_->try_recv_chunk(v);
++        if (rv != 0)  {
++                if (rv == -EWOULDBLOCK)
++                        return rv;
++                else {
++                        delete p_conn_;
++                        p_conn_ = 0;
++                }
++                return rv;
++        }
++        printf("Received chunk of %lu bytes. Deserializing cmd\n", v.size());
++
++	LFUNHolder lh(&cursor_.bv().buffer());
++	int my_version;
++	lh.unserialize(v);
++
++		
++	if(lh.get_version(version))
++		LYXERR(Debug::ACTION,"\nthis LFUN Is targeted at version " << version);	 
++	if(lh.get_rversion(my_version)){
++		LYXERR(Debug::ACTION,"\nthe sender is in version "<< my_version);
++		remote_version = my_version;
++	}
++	if(!lh.get_String(str_)){
++		LYXERR(Debug::SELECTION,"string not received");
++	}		
++	if(!lh.get_LFUN(cmd))
++		LYXERR(Debug::ACTION,"cmd not received");
++	if(lh.get_DocIt(docit_)){
++		// adjust cursor based on History Q
++		cursor_.setCursor(docit_);
++	}
++	if(!lh.get_Anchor(anchor_)){
++		LYXERR(Debug::ACTION,"anchor not received");
++	}	
++
++	return 0;
++}
+ 
+ 
+ BufferView::BufferView(Buffer & buf)
+-	: width_(0), height_(0), full_screen_(false), buffer_(buf),
+-      d(new Private(*this))
++	: QObject(0), width_(0), height_(0), full_screen_(false), buffer_(buf),d(new Private(*this))
+ {
+ 	d->xsel_cache_.set = false;
+ 	d->intl_.initKeyMapper(lyxrc.use_kbmap);
+@@ -311,6 +527,11 @@ BufferView::BufferView(Buffer & buf)
+ 	d->cursor_.setCurrentFont();
+ 
+ 	buffer_.updatePreviews();
++	connect(&d->timer_, SIGNAL(timeout()), this, SLOT(periodicTimer()));
++	d->timer_.setInterval(500);
++	d->p_conn_ = 0;
++	d->client_conn_ = true;
++	d->client_id = 0;
+ }
+ 
+ 
+@@ -321,6 +542,14 @@ BufferView::~BufferView()
+ 	// currently can only handle bottom (whole document) level pit and pos.
+ 	// That is to say, if a cursor is in a nested inset, it will be
+ 	// restore to the left of the top level inset.
++	vector<BufferView *>::const_iterator it = d->remote_views_.begin();
++        for (; it != d->remote_views_.end(); ++it) {
++                delete *it;
++        }
++        if (d->p_conn_)
++                d->p_conn_->close();
++
++
+ 	LastFilePosSection::FilePos fp;
+ 	fp.pit = d->cursor_.bottom().pit();
+ 	fp.pos = d->cursor_.bottom().pos();
+@@ -332,6 +561,204 @@ BufferView::~BufferView()
+ 	delete d;
+ }
+ 
++BufferView *BufferView::addRemoteBufferView(SocketConnection *p_conn, bool is_client)
++{
++	int remote_version = 0;
++	// @FIXME shouldn't be zero
++	int remote_client_id = 0;
++        if (is_client) {
++                int rv;
++                string s;
++                message(_("Receiving buffer contents..."));
++                /// @TODO Allow user to cancel the action
++                do {
++                        rv = p_conn->try_recv_string(s);
++                        if (rv == -EWOULDBLOCK)
++                                usleep(100);
++                        else if (rv != 0)
++                                return 0;
++                } while (rv == -EWOULDBLOCK);
++                /// @TODO Check for parsing errors (e.g., mismatching LyX versions)
++		istringstream iss(s);
++		iss >> d->client_id;
++		iss >> remote_version;
++		
++		string sleft = iss.str().substr(iss.tellg());               
++		buffer().readString(sleft);
++		
++                message(_("Connected to remote LyX instance"));
++
++        } else {
++                ostringstream oss;
++                message(_("New client connected. Sending buffer..."));
++                buffer().write(oss);
++
++		remote_client_id = d->remote_views_.size() +1;
++		
++		ostringstream v;
++		// send client its id
++		v << remote_client_id << " ";
++		// send latest version I am in
++		v << (int)d->HistoryQ.size()-1;
++
++		
++
++                string s = v.str() + " " + oss.str();
++		
++                if (p_conn->send_string(s) != 0)
++                        return 0;
++		message(_("New client succesfully connected."));
++			
++	        }
++        BufferView *p_bv = new BufferView(buffer());
++        /// @TODO Just a random size in the hope that we skip some crash
++        p_bv->resize(320, 200);
++        p_bv->d->p_conn_ = p_conn;
++        p_bv->d->client_conn_ = is_client;
++	// unique client id
++	p_bv->d->client_id = remote_client_id;
++	// every new client that connects will be in 0th version
++	p_bv->d->remote_version = remote_version;
++        d->remote_views_.push_back(p_bv);
++        d->timer_.start();
++
++LYXERR(Debug::ACTION,"\n My client id " << d->client_id << ",version"<< (int)d->HistoryQ.size()-1);
++LYXERR(Debug::ACTION,"\n his client id " << remote_client_id <<",version" << remote_version << '\n');
++        return p_bv;
++}
++
++void BufferView::cursorChanged(FuncRequest const & LFUN, DocIterator diff, DocIterator cursor, DocIterator anchor)
++{
++	// not remote view 
++	if(!d->remote_views_.empty() && !lyxaction.funcHasFlag(LFUN.action(), LyXAction::NoUpdate)){
++		d -> historyQInsert(LFUN, diff, cursor, anchor, d -> client_id);
++		d -> historyQDisplay();
++	}
++}
++void BufferView::repositionSelection(Cursor & cursor, DocIterator & docit, DocIterator & anchor)
++{
++	cursor.setCursor(anchor);
++	cursor.selHandle(true);
++	cursor.setCursor(docit);
++}
++void BufferView::periodicTimer()
++{
++        
++        SocketConnection *p_conn;
++        if (d->sock_.accept(&p_conn) == 0)
++                addRemoteBufferView(p_conn, false);
++
++        vector<BufferView *>::const_iterator it = d->remote_views_.begin();
++        for (; it != d->remote_views_.end(); ++it) {
++                if (!(*it)->d->p_conn_)
++                        continue;
++
++                int rv;
++                //do {
++                        FuncRequest cmd;
++
++			int target_version;
++			DocIterator remote_docit, anchor;
++			string add_info;
++                        rv = (*it)->d->try_recv(cmd, target_version, remote_docit, anchor, add_info);
++
++
++                        if (rv == 0) {
++                                LYXERR(Debug::ACTION, "Dispatching received command from remote: "
++                                       "action[" << cmd.action() << ']'
++                                       << " arg[" << to_utf8(cmd.argument()) << ']'
++                                       << " x[" << cmd.x() << ']'
++                                       << " y[" << cmd.y() << ']'
++                                       << " button[" << cmd.button() << ']');
++				
++				//first handle pull buffer
++				if(cmd.action() == LFUN_COLLABORATE_PULL) {
++					if(!add_info.empty()){
++						buffer().readString(add_info);	 
++						buffer().changed(true);
++						return;					
++					}					
++					ostringstream oss;
++					buffer().write(oss);
++					string bfr = oss.str();
++
++					LFUNHolder lh;
++					lh.attach_LFUN(cmd);
++					lh.attach_String(bfr);
++					lh.attach_rversion(d->HistoryQ.size()-1);
++
++					vector<unsigned char> v = lh.serialize();
++					if ((*it)->d->p_conn_->send_chunk(v) != 0)
++						message(_("Sending Failed!"));
++				}
++
++
++				// adjust remote cursor
++				d->adjustCursor(remote_docit, (*it)->d->client_id, target_version);
++				if(remote_docit.empty())
++					break;// donot dispatch if cursor empty					
++				if(!anchor.empty()){
++					d->adjustCursor(anchor, (*it)->d->client_id, target_version);
++					(*it)->d->cursor_.setSelection(remote_docit, anchor);
++					
++				}				
++				else
++					(*it)->d->cursor_.setCursor(remote_docit);
++				
++				DocIterator selbegin =  (*it) -> d -> cursor_.selectionBegin(), selend =  (*it) -> d -> cursor_.selectionEnd();
++
++				DocIterator before = (*it) -> d -> cursor_;
++
++				FuncCode const act = cmd.action();
++				/*if (act == LFUN_PASTE) {					
++					cap::replaceSelectionWithString((*it)->d->cursor_, from_ascii(add_info));					
++				}
++				else if(act == LFUN_COPY){
++					cap::copySelection((*it)->d->cursor_);
++				}
++				else {*/
++					DispatchResult dr;
++					(*it)->dispatch(cmd, dr, false);
++					if (!dr.dispatched())
++					{	(*it)->d->cursor_.dispatch(cmd);
++						dr = (*it)->d->cursor_.result();	
++						if (!dr.dispatched())
++						{
++							(*it)->d->cursor_.inset().dispatch((*it)->d->cursor_,cmd);
++						}
++					}
++				//}
++				DocIterator after = (*it) -> d -> cursor_;
++
++
++				if(!lyxaction.funcHasFlag(cmd.action(), LyXAction::NoUpdate)){
++
++					DocIterator diff = after - before;	
++					
++					DocIterator currentBufferPos = d->cursor_;					
++					currentBufferPos.addDiff(before, diff, d->client_id <  (*it)->d->client_id );
++					d->cursor_.setCursor(currentBufferPos);	
++					
++					if(after != before){
++						if(anchor.empty())
++							d->historyQInsert(cmd, diff, before,anchor, (*it)->d->client_id);	
++						else
++							d->historyQInsert(cmd, diff, selbegin,selend, (*it)->d->client_id);
++						d->historyQDisplay();	
++					}		
++				}
++
++				
++
++				
++                                buffer().changed(true);
++                                // Clients are only notified, whilst server notifies other clients
++                                if (!(*it)->d->client_conn_)
++                                        d->send(cmd, (*it)->d->p_conn_);
++                        }
++                //} while (rv == 0);
++        }
++}
+ 
+ int BufferView::rightMargin() const
+ {
+@@ -1087,6 +1514,9 @@ bool BufferView::getStatus(FuncRequest const & cmd, FuncStatus & flag)
+ 	case LFUN_KEYMAP_PRIMARY:
+ 	case LFUN_KEYMAP_SECONDARY:
+ 	case LFUN_KEYMAP_TOGGLE:
++	case LFUN_COLLABORATE_BIND:
++	case LFUN_COLLABORATE_SPEED:
++	case LFUN_COLLABORATE_PULL:
+ 		flag.setEnabled(true);
+ 		break;
+ 
+@@ -1213,9 +1643,10 @@ void BufferView::editInset(string const & name, Inset * inset)
+ 	d->edited_insets_[name] = inset;
+ }
+ 
++void BufferView::dispatch(FuncRequest const & cmd, DispatchResult & dr, bool enable_send)
++ {
++	DocIterator before =  d->cursor_;
+ 
+-void BufferView::dispatch(FuncRequest const & cmd, DispatchResult & dr)
+-{
+ 	LYXERR(Debug::ACTION, "BufferView::dispatch: cmd: " << cmd);
+ 
+ 	string const argument = to_utf8(cmd.argument());
+@@ -1231,6 +1662,9 @@ void BufferView::dispatch(FuncRequest const & cmd, DispatchResult & dr)
+ 	buffer_.undo().beginUndoGroup();
+ 
+ 	FuncCode const act = cmd.action();
++
++	if (enable_send && !lyxaction.funcHasFlag(cmd.action(), LyXAction::NoUpdate) && !lyxaction.funcHasFlag(cmd.action(), LyXAction::ReadOnly) && act != LFUN_COLLABORATE_BIND && act != LFUN_COLLABORATE_CONNECT && act != LFUN_COLLABORATE_SPEED) 
++ 	 	d->send(cmd); 
+ 	switch (act) {
+ 
+ 	case LFUN_BUFFER_PARAMS_APPLY: {
+@@ -1254,7 +1688,34 @@ void BufferView::dispatch(FuncRequest const & cmd, DispatchResult & dr)
+ 		dr.forceBufferUpdate();
+ 		break;
+ 	}
++	
++ 	case LFUN_COLLABORATE_BIND: { 
++ 		d->sock_.close(); 
++ 		d->timer_.stop(); 
++ 		if (d->sock_.bind("127.0.0.1", to_utf8(cmd.argument())) == 0) { 
++ 		        d->timer_.start(); 
++ 		        message(_("Listening for incoming connections...")); 
++ 		} else 
++ 		        message(_("Could not bind!")); 
++		break;
++ 		} 
+ 
++	case LFUN_COLLABORATE_SPEED: { 
++		string sarg = cmd.getArg(0);
++		int time = d->timer_.interval(); 
++		if(sarg[0] == '+')
++			time += 3000;
++		else if(sarg[0] == '-' && (time - 3000) > 0 )
++			time -= 3000;
++		d->timer_.setInterval(time);	
++		break;
++
++		}
++	case LFUN_COLLABORATE_PULL: { 
++		message(_("Pulling Data..")); 
++		break;
++
++ 		} 
+ 	case LFUN_LAYOUT_MODULES_CLEAR: {
+ 		cur.recordUndoFullDocument();
+ 		buffer_.params().clearLayoutModules();
+@@ -1996,6 +2457,9 @@ void BufferView::dispatch(FuncRequest const & cmd, DispatchResult & dr)
+ 		break;
+ 	}
+ 
++	/*case LFUN_PASTE:
++		LYXERR(Debug::SELECTION, "Success " << cap::selection(0));
++		cap::replaceSelectionWithString(cur, cap::selection(0));*/
+ 	default:
+ 		// OK, so try the Buffer itself...
+ 		buffer_.dispatch(cmd, dr);
+@@ -2005,6 +2469,15 @@ void BufferView::dispatch(FuncRequest const & cmd, DispatchResult & dr)
+ 
+ 	buffer_.undo().endUndoGroup();
+ 	dr.dispatched(dispatched);
++
++
++	DocIterator after =  d->cursor_;
++	DocIterator anchor;
++	if(after != before)
++	if(!lyxaction.funcHasFlag(cmd.action(), LyXAction::NoUpdate)){
++		d -> historyQInsert(cmd, after - before, before,anchor ,0);
++		d -> historyQDisplay();
++	}
+ }
+ 
+ 
+diff --git a/src/BufferView.h b/src/BufferView.h
+index a144aee..b7760ee 100644
+--- a/src/BufferView.h
++++ b/src/BufferView.h
+@@ -20,6 +20,8 @@
+ 
+ #include "support/strfwd.h"
+ #include "support/types.h"
++#include "support/Socket.h" 
++#include <QTimer>
+ 
+ namespace lyx {
+ 
+@@ -81,7 +83,9 @@ struct ScrollbarParameters
+  * \sa Buffer
+  * \sa CoordCache
+  */
+-class BufferView {
++
++class BufferView : public QObject { 
++ 	Q_OBJECT 
+ public:
+ 	///
+ 	explicit BufferView(Buffer & buffer);
+@@ -202,8 +206,7 @@ public:
+ 	/// \return true if we've made a decision
+ 	bool getStatus(FuncRequest const & cmd, FuncStatus & flag);
+ 	/// execute the given function.
+-	void dispatch(FuncRequest const & cmd, DispatchResult & dr);
+-
++	virtual void dispatch(FuncRequest const & cmd, DispatchResult & dr, bool enable_send = true); 
+ 	/// request an X11 selection.
+ 	/// \return the selected string.
+ 	docstring const requestSelection();
+@@ -319,8 +322,16 @@ public:
+ 	bool clickableInset() const;
+ 	///
+ 	void makeDocumentClass();
++	/// Add remote-tracking BufferView instance 
++ 	BufferView *addRemoteBufferView(SocketConnection *p_conn, bool is_client); 
++	
++	void repositionSelection(Cursor & cursor, DocIterator & docit, DocIterator & anchor);
++
++	void cursorChanged(FuncRequest const & LFUN, DocIterator diff, DocIterator cursor, DocIterator anchor);
++ 		 
+ 
+ private:
++	
+ 	/// noncopyable
+ 	BufferView(BufferView const &);
+ 	void operator=(BufferView const &);
+@@ -360,6 +371,11 @@ private:
+ 
+ 	struct Private;
+ 	Private * const d;
++
++
++private Q_SLOTS: 
++ 	/// Periodic poll of the listening socket and connection(s), if any 
++ 	void periodicTimer(); 
+ };
+ 
+ /// some space for drawing the 'nested' markers (in pixel)
+diff --git a/src/Cursor.cpp b/src/Cursor.cpp
+index fe03a31..b8b90bf 100644
+--- a/src/Cursor.cpp
++++ b/src/Cursor.cpp
+@@ -351,7 +351,13 @@ void Cursor::saveBeforeDispatchPosXY()
+ 
+ 
+ void Cursor::dispatch(FuncRequest const & cmd0)
+-{
++{	
++	DocIterator before = *this;
++	DocIterator anchor;
++	DocIterator selbegin = selectionBegin(), selend = selectionEnd();
++	if(selection())
++		anchor = realAnchor();
++
+ 	LYXERR(Debug::DEBUG, "cmd: " << cmd0 << '\n' << *this);
+ 	if (empty())
+ 		return;
+@@ -435,6 +441,14 @@ void Cursor::dispatch(FuncRequest const & cmd0)
+ 		}
+ 		old.endUndoGroup();
+ 	}
++
++	DocIterator after = *this;
++	if(after != before){
++		if(anchor.empty())
++			bv().cursorChanged(cmd0, after - before, before , anchor);
++		else
++			bv().cursorChanged(cmd0, after - before, selbegin , selend);
++	}
+ }
+ 
+ 
+@@ -1216,6 +1230,12 @@ void Cursor::setSelection(DocIterator const & where, int n)
+ 	pos() += n;
+ }
+ 
++void Cursor::setSelection(DocIterator const & docit, DocIterator const & anchor)
++{
++	setCursor(anchor);
++	selHandle(true);
++	setCursor(docit);
++}
+ 
+ void Cursor::clearSelection()
+ {
+diff --git a/src/Cursor.h b/src/Cursor.h
+index c3ae448..637f535 100644
+--- a/src/Cursor.h
++++ b/src/Cursor.h
+@@ -185,6 +185,8 @@ public:
+ 	/// set selection at given position
+ 	void setSelection(DocIterator const & where, int n);
+ 	///
++	void setSelection(DocIterator const & DocIt, DocIterator const & anchor);
++	///
+ 	void clearSelection();
+ 	/// access start of selection
+ 	CursorSlice selBegin() const;
+diff --git a/src/CursorSlice.cpp b/src/CursorSlice.cpp
+index 0e46c07..cafc4ae 100644
+--- a/src/CursorSlice.cpp
++++ b/src/CursorSlice.cpp
+@@ -29,8 +29,10 @@
+ #include "support/gettext.h"
+ #include "support/lassert.h"
+ 
++#include <stdlib.h>
+ #include <ostream>
+ 
++
+ using namespace std;
+ 
+ namespace lyx {
+@@ -172,8 +174,7 @@ bool CursorSlice::at_begin() const
+ 
+ bool operator==(CursorSlice const & p, CursorSlice const & q)
+ {
+-	return p.inset_ == q.inset_
+-	       && p.idx_ == q.idx_
++	return  p.idx_ == q.idx_
+ 	       && p.pit_ == q.pit_
+ 	       && p.pos_ == q.pos_;
+ }
+@@ -181,8 +182,7 @@ bool operator==(CursorSlice const & p, CursorSlice const & q)
+ 
+ bool operator!=(CursorSlice const & p, CursorSlice const & q)
+ {
+-	return p.inset_ != q.inset_
+-	       || p.idx_ != q.idx_
++	return  p.idx_ != q.idx_
+ 	       || p.pit_ != q.pit_
+ 	       || p.pos_ != q.pos_;
+ }
+@@ -190,12 +190,12 @@ bool operator!=(CursorSlice const & p, CursorSlice const & q)
+ 
+ bool operator<(CursorSlice const & p, CursorSlice const & q)
+ {
+-	if (p.inset_ != q.inset_) {
++	/*if (p.inset_ != q.inset_) {
+ 		LYXERR0("can't compare cursor and anchor in different insets\n"
+ 		       << "p: " << p << '\n' << "q: " << q);
+ 		// It should be safe to continue, just registering the error.
+ 		LASSERT(false, return false);
+-	}
++	}*/
+ 	if (p.idx_ != q.idx_)
+ 		return p.idx_ < q.idx_;
+ 	if (p.pit_ != q.pit_)
+@@ -218,6 +218,13 @@ bool operator<=(CursorSlice const & p, CursorSlice const & q)
+ 
+ ostream & operator<<(ostream & os, CursorSlice const & item)
+ {
++
++return os 
++	<<item.idx_
++	<< " " <<item.pit_
++	<< " " <<item.pos_;
++
++/*
+ 	return os
+ 	   << "inset: " << (void *)item.inset_
+ //	   << " text: " << item.text()
+@@ -227,6 +234,20 @@ ostream & operator<<(ostream & os, CursorSlice const & item)
+ //	   << " x: " << item.inset_->x()
+ //	   << " y: " << item.inset_->y()
+ ;
++*/
++}
++
++istream & operator>>(istream & is,CursorSlice & item)
++{
++	string t;
++	is >> t;
++	item.idx_ = atoi(t.c_str());
++	is >> t;
++	item.pit_ = atoi(t.c_str());
++	is >> t;
++	item.pos_ = atoi(t.c_str());
++
++	return is;
+ }
+ 
+ 
+diff --git a/src/CursorSlice.h b/src/CursorSlice.h
+index 01634bd..039e674 100644
+--- a/src/CursorSlice.h
++++ b/src/CursorSlice.h
+@@ -122,8 +122,12 @@ public:
+ 	/// returns cell corresponding to this position
+ 	MathData & cell() const;
+ 
+-	/// write some debug information to \p os
++	/// write serialized data to os
+ 	friend std::ostream & operator<<(std::ostream &, CursorSlice const &);
++	
++	// extract serialized data from is and set cursorslice 
++	friend std::istream & operator>>(std::istream &, CursorSlice & );
++
+ 	/// move to next position
+ 	void forwardPos();
+ 	/// move to previous position
+diff --git a/src/DocIterator.cpp b/src/DocIterator.cpp
+index 859aae9..7d0e224 100644
+--- a/src/DocIterator.cpp
++++ b/src/DocIterator.cpp
+@@ -614,12 +614,41 @@ void DocIterator::append(DocIterator::idx_type idx, pos_type pos)
+ 
+ ostream & operator<<(ostream & os, DocIterator const & dit)
+ {
++	os << dit.depth();
+ 	for (size_t i = 0, n = dit.depth(); i != n; ++i)
+-		os << " " << dit[i] << "\n";
++		os << " " << dit[i];
+ 	return os;
++
++	
++}
++
++istream & operator>>(istream & is, DocIterator & dit)
++{
++	size_t depth;	
++	is >> depth;
++	dit.clear();
++
++	for (size_t i = 0, n = depth; i != n; i++)
++	{
++			CursorSlice cs;
++			is >> cs;
++			dit.push_back(cs);
++	}
++	//dit.sanitize();	
++	
++	return is;
++	
+ }
++bool operator/(DocIterator const & dit1, DocIterator const & dit2)
++{
++	size_t depth = std::min(dit1.depth(), dit2.depth());
+ 
++	bool t = true;
++	for(int i=0; i < depth && t != false; i++)
++		t = (dit1[i] == dit2[i]);
+ 
++	return t;
++}
+ ///////////////////////////////////////////////////////
+ 
+ StableDocIterator::StableDocIterator(DocIterator const & dit)
+@@ -653,4 +682,84 @@ bool operator==(StableDocIterator const & dit1, StableDocIterator const & dit2)
+ }
+ 
+ 
++DocIterator & operator-(DocIterator const & dit1, DocIterator const & dit2)
++{
++	size_t depth1 = dit1.depth();
++	size_t depth2 = dit2.depth();
++	size_t min = depth1 < depth2 ? depth1 : depth2;	
++	DocIterator dit;
++
++	for(size_t i = 0, n = min; i != n; ++i)
++	{
++		CursorSlice cs;
++		cs.pit() = dit1[i].pit() - dit2[i].pit();
++		// if paragraph was deleted, then take additional availabel positions in current para
++		if (cs.pit()<0)
++			cs.pos() = dit2[i].pos() - dit2[i].lastpos();
++		else
++			cs.pos() = dit1[i].pos() - dit2[i].pos();
++		cs.idx() = dit1[i].idx() - dit2[i].idx();
++		dit.push_back(cs);
++	}
++	//delete an inset
++	if(depth1 < depth2)
++	{
++		dit.top().pos() = -1;
++		for(size_t i = depth1, n = depth2; i != n; ++i)
++		{
++			CursorSlice cs;
++			cs.pos() = 0 - dit2[i].pos();
++			cs.pit() = 0 - dit2[i].pit();
++			cs.idx() = 0 - dit2[i].idx();
++			dit.push_back(cs);
++		}
++	}//enter an inset
++	else if(depth1 > depth2) 
++	{
++		dit.top().pos() = 1;	
++		for(size_t i = depth2, n = depth1; i != n; ++i)
++		{
++			CursorSlice cs;
++			cs.pos() = dit1[i].pos() - 0;
++			cs.pit() = dit1[i].pit() - 0;
++			cs.idx() = dit1[i].idx() - 0;
++			dit.push_back(cs);
++		}
++	}// if paragraph was inserted or deleted than make pos, 0
++	//if(dit.top().pit()!=0)
++	//	dit.top().pos()=0;
++	return dit;
++}
++
++void DocIterator::addDiff(DocIterator const & wrt, DocIterator const & diff, bool priority)
++{
++	
++	//if this cursor is in front of wrt or 
++	// if this cursor = wrt and its client_id is less than wrt
++
++	if( (*this > wrt ) || (priority && *this / wrt) ){
++	
++
++		size_t i = 0;
++		size_t least = slices_.size() < wrt.depth()? slices_.size() : wrt.depth(); 
++	
++		// untill same innermost inset
++		while(i < least && slices_[i] == wrt[i] /*&& *this != wrt*/)
++			++i;
++		
++		if(*this / wrt /*&& slices_.size() != wrt.depth()*/)
++			i--;
++		// to avoid same cursor location
++		if(i < least){
++			if(slices_[i].pit() == wrt[i].pit())
++				slices_[i].pos() += diff[i].pos();			
++			slices_[i].pit() += diff[i].pit();
++
++			
++		}	
++	}
++	
++}
++
++
+ } // namespace lyx
+diff --git a/src/DocIterator.h b/src/DocIterator.h
+index 7796819..dbe9273 100644
+--- a/src/DocIterator.h
++++ b/src/DocIterator.h
+@@ -208,14 +208,26 @@ public:
+ 	/// are we some 'extension' (i.e. deeper nested) of the given iterator
+ 	bool hasPart(DocIterator const & it) const;
+ 
+-	/// output
++	// third para is comparison (>) between client_id of this DOcit and client_id of wrt
++	void addDiff(DocIterator const & wrt, DocIterator const & diff, bool has_high_priority);
++
++	/// write serialized data to os
+ 	friend std::ostream &
+ 	operator<<(std::ostream & os, DocIterator const & cur);
++
++	//extract serial data from is and reset cur
++	friend std::istream &
++	operator>>(std::istream & is, DocIterator & cur);
+ 	friend LyXErr & operator<<(LyXErr & os, DocIterator const & it);
+ 	///
+ 	friend bool operator==(DocIterator const &, DocIterator const &);
+ 	friend bool operator<(DocIterator const &, DocIterator const &);
+ 	friend bool operator>(DocIterator const &, DocIterator const &);
++
++	/// similar to operator== but compares same number of slices  
++	friend bool operator/(DocIterator const &, DocIterator const &);
++
++	friend DocIterator & operator-(DocIterator const &, DocIterator const &);
+ 	friend bool operator<=(DocIterator const &, DocIterator const &);
+ 	///
+ 	friend class StableDocIterator;
+@@ -252,6 +264,7 @@ private:
+ 	friend class InsetIterator;
+ 	friend DocIterator doc_iterator_begin(Buffer const * buf, Inset const * inset);
+ 	friend DocIterator doc_iterator_end(Buffer const * buf, Inset const * inset);
++	
+ 	///
+ 	explicit DocIterator(Buffer * buf, Inset * inset);
+ 	/**
+diff --git a/src/FuncCode.h b/src/FuncCode.h
+index 2ae820a..d0ef560 100644
+--- a/src/FuncCode.h
++++ b/src/FuncCode.h
+@@ -458,6 +458,10 @@ enum FuncCode
+ 	// 355
+ 	LFUN_SPELLING_CONTINUOUSLY,     // vfr, 20130324
+ 	LFUN_SEPARATOR_INSERT,          // ef 20140502
++	LFUN_COLLABORATE_BIND,          // tommaso, 20120101 
++	LFUN_COLLABORATE_CONNECT,       // tommaso, 20120101 
++	LFUN_COLLABORATE_SPEED,       	// sushant, 20140701
++	LFUN_COLLABORATE_PULL,       	// sushant, 20140816
+ 	LFUN_LASTACTION                 // end of the table
+ };
+ 
+diff --git a/src/FuncRequest.cpp b/src/FuncRequest.cpp
+index c912b3a..a596d63 100644
+--- a/src/FuncRequest.cpp
++++ b/src/FuncRequest.cpp
+@@ -20,6 +20,7 @@
+ #include <iostream>
+ #include <sstream>
+ #include <vector>
++#include <stdio.h> 
+ 
+ using namespace std;
+ using namespace lyx::support;
+@@ -123,6 +124,54 @@ string FuncRequest::getLongArg(unsigned int i) const
+ 	return i < args.size() ? args[i] : string();
+ }
+ 
++void FuncRequest::serializeTo(std::vector<unsigned char> & v) const
++{
++        ostringstream oss;
++        oss << (int)action_;
++        oss << " " << (int)origin_;
++        oss << " " << x_ << " " << y_;
++        oss << " " << (int)button_;
++        oss << " " << to_utf8(argument_);
++        string s = oss.str();
++        v.assign(s.begin(), s.end());
++
++        v.push_back(0);
++        printf("Serialized to: %s\n", (char*)&v[0]);
++        v.pop_back();
++}
++
++
++void FuncRequest::serializeFrom(std::vector<unsigned char> const & v)
++{
++        {
++                vector<unsigned char> w = v;
++                w.push_back((unsigned char)0);
++                printf("Deserializing: %s\n", (char*)&w[0]);
++                w.pop_back();
++        }
++
++        string s;
++        s.assign(v.begin(), v.end());
++        istringstream iss(s);
++        int i;
++        iss >> i;
++        action_ = (FuncCode)i;
++        iss >> i;
++        origin_ = (Origin)i;
++        iss >> x_ >> y_;
++        iss >> i;
++        button_ = (mouse_button::state)i;
++        char ch;
++        iss >> noskipws >> ch;  // Skip " "
++        string t;
++        do {
++                iss >> ch;
++                if (!iss.fail())
++                        t = t + ch;
++        } while (!iss.eof());
++        printf("t='%s'\n", t.c_str());
++        argument_ = from_utf8(string(t));
++}
+ 
+ bool operator==(FuncRequest const & lhs, FuncRequest const & rhs)
+ {
+diff --git a/src/FuncRequest.h b/src/FuncRequest.h
+index 2f25d0a..091f712 100644
+--- a/src/FuncRequest.h
++++ b/src/FuncRequest.h
+@@ -17,7 +17,7 @@
+ #include "support/docstring.h"
+ 
+ #include "frontends/mouse_state.h"
+-
++#include <vector> 
+ 
+ namespace lyx {
+ 
+@@ -86,6 +86,12 @@ public:
+ 	/// eating all characters up to the end of the command line
+ 	std::string getLongArg(unsigned int i) const;
+ 
++	/// serialize self into a vector
++        void serializeTo(std::vector<unsigned char> & v) const;
++
++        /// unserialize self from a vector
++        void serializeFrom(std::vector<unsigned char> const & v);
++
+ 	/// 
+ 	static FuncRequest const unknown;
+ 	/// 
+diff --git a/src/LFUNHolder.cpp b/src/LFUNHolder.cpp
+new file mode 100644
+index 0000000..c3dc331
+--- /dev/null
++++ b/src/LFUNHolder.cpp
+@@ -0,0 +1,302 @@
++// -*- C++ -*- 
++/**
++ * \file LFUNHolder.cpp
++ *
++ * This file is part of LyX, the document processor.
++ * Licence details can be found in the file COPYING.
++ *
++ * \author Sushant Raikar
++ *
++ */
++//version number
++#define ATT_VNUM 1	
++
++//funcrequest
++#define ATT_LFUN 2	
++
++//dociterator
++#define ATT_DOCIT 4
++
++//anchor docit
++#define ATT_ANCH 16
++
++//remote Version
++#define ATT_RVNUM 16
++
++//attach string
++#define ATT_STR 32
++
++#include <config.h>
++#include "LFUNHolder.h"
++
++#include <sstream>
++#include <ostream>
++#include <stdio.h>	
++using namespace std;
++
++
++namespace lyx {
++
++
++
++//#define logsyserr(msg)
++#define logsyserr(msg) perror(msg)
++
++LFUNHolder::LFUNHolder():prefix(0),version(-1){
++
++	funcrequest_ = new FuncRequest();
++	dociterator_ = new DocIterator();
++	anchor_ = new DocIterator();
++	string_ = new string();
++}
++
++
++LFUNHolder::LFUNHolder(Buffer * buffer):prefix(0),version(-1){
++
++	funcrequest_ = new FuncRequest();
++	dociterator_ = new DocIterator(buffer);
++	anchor_ = new DocIterator(buffer);
++	string_ = new string();
++}
++
++
++LFUNHolder::~LFUNHolder(){
++
++}
++
++vector<unsigned char> LFUNHolder::serialize() {
++
++	vector<unsigned char> rv;
++
++	ostringstream oss;
++	oss << (int)prefix << " ";
++
++
++
++	if(prefix & ATT_VNUM){
++		oss << (int)version << " ";
++	}
++		
++	if(prefix & ATT_RVNUM){
++		oss << (int)remote_v << " ";
++	}
++
++	if(prefix & ATT_LFUN){
++		string s;
++		vector<unsigned char> v;
++		funcrequest_->serializeTo(v);
++		s.assign(v.begin(), v.end());
++
++		oss << (int)v.size() << " ";
++		oss << s << " ";
++	}
++
++	if(prefix & ATT_DOCIT){
++		oss << *dociterator_ << " ";
++	}
++	
++	if(prefix & ATT_ANCH){
++		oss << *anchor_ << " ";
++	}
++	
++	if(prefix & ATT_STR){
++		oss << string_->length() << " ";
++		oss << *string_;		
++	}
++
++	string st = oss.str(); 
++	rv.assign(st.begin(), st.end());
++
++	return rv;
++}
++
++
++void LFUNHolder::unserialize(std::vector<unsigned char> const & v) {
++
++	string s; 
++	s.assign(v.begin(), v.end()); 
++	istringstream iss(s);
++	 
++	int i;
++	iss >> i;
++	prefix = i;
++	if(prefix & ATT_VNUM){
++		iss >> i;
++		version = i;
++	}
++
++	if(prefix & ATT_RVNUM){
++		iss >> i;
++		remote_v = i;
++	}
++	
++	if(prefix & ATT_LFUN){
++		int size;
++		iss >> size;
++		//ignore space
++		iss.ignore(1);	
++		string s;
++		vector<unsigned char> vt;
++		s=iss.str().substr(iss.tellg(),size);
++		vt.assign(s.begin(), s.end());
++		funcrequest_->serializeFrom(vt);
++		 //ignore LFUN sub-vector
++		iss.ignore(size + 1); 
++	}
++
++	if(prefix & ATT_DOCIT){
++		iss >> *dociterator_;
++	}
++	
++	if(prefix & ATT_ANCH){
++		iss >> *anchor_;
++	}
++	
++	if(prefix & ATT_STR){
++		int length;
++		iss >> length;
++		iss.ignore(1);
++		*string_ = iss.str().substr(iss.tellg(),length);
++		iss.ignore(length + 1);		
++	}
++
++}
++
++void LFUNHolder::attach_LFUN(FuncRequest cmd) {
++
++	*funcrequest_= cmd;
++	prefix = prefix | ATT_LFUN;
++}
++
++FuncRequest* LFUNHolder::detach_LFUN() {
++
++	prefix = prefix & (~ATT_LFUN);
++	return funcrequest_;
++}
++
++bool LFUNHolder::get_LFUN(FuncRequest & fr) {
++
++	if(prefix & ATT_LFUN)
++	{
++		fr = *funcrequest_;
++		return true;
++	}	
++	return false;
++}
++
++
++void LFUNHolder::attach_version(unsigned int const & ver) {
++
++	version = ver;
++	prefix = prefix | ATT_VNUM;
++}
++
++unsigned int LFUNHolder::detach_version() {
++
++	prefix = prefix & (~ATT_VNUM);
++	return version;
++}
++
++bool LFUNHolder::get_version(int & v) {
++
++	if(prefix & ATT_VNUM)
++	{
++		v = version;
++		return true;
++	}
++	return false;
++}
++
++void LFUNHolder::attach_rversion(unsigned int const & rver) {
++
++	remote_v = rver;
++	prefix = prefix | ATT_RVNUM;
++}
++
++unsigned int LFUNHolder::detach_rversion() {
++
++	prefix = prefix & (~ATT_RVNUM);
++	return version;
++}
++
++bool LFUNHolder::get_rversion(int & v) {
++
++	if(prefix & ATT_RVNUM)
++	{
++		v = remote_v;
++		return true;
++	}
++	return false;
++}
++
++
++void LFUNHolder::attach_DocIt(DocIterator & di) {
++
++	*dociterator_ = di;
++	prefix = prefix | ATT_DOCIT;
++}
++ 
++DocIterator* LFUNHolder::detach_DocIt() {
++
++	prefix = prefix & (~ATT_DOCIT);
++	return dociterator_;
++}
++
++bool LFUNHolder::get_DocIt(DocIterator & di) {
++
++	if(prefix & ATT_DOCIT)
++	{
++		di = *dociterator_;
++		return true;
++	}
++	return false;
++
++}
++
++void LFUNHolder::attach_Anchor(DocIterator & anch)
++{
++	*anchor_ = anch;
++	prefix = prefix | ATT_ANCH;
++}
++
++DocIterator* LFUNHolder::detach_Anchor()
++{
++	prefix = prefix & (~ATT_ANCH);
++	return anchor_;
++}
++
++bool LFUNHolder::get_Anchor(DocIterator & anch)
++{
++	if(prefix & ATT_ANCH)
++	{
++		anch = *anchor_;
++		return true;
++	}
++	return false;
++}
++
++void LFUNHolder::attach_String(std::string & st)
++{
++	*string_=st;
++	prefix = prefix | ATT_STR;
++}
++std::string* LFUNHolder::detach_String()
++{
++	prefix = prefix & (~ATT_STR);
++	return string_;
++}
++bool LFUNHolder::get_String(std::string & st)
++{
++	if(prefix & ATT_STR)
++	{
++		st = *string_;
++		return true;
++	}
++	return false;	
++}
++
++void LFUNHolder::clear() {
++	prefix = 0;
++}
++
++}
+diff --git a/src/LFUNHolder.h b/src/LFUNHolder.h
+new file mode 100644
+index 0000000..7386b4c
+--- /dev/null
++++ b/src/LFUNHolder.h
+@@ -0,0 +1,96 @@
++// -*- C++ -*- 
++/** 
++ * \file LFUNHolder.h 
++ * 
++ * This file is part of LyX, the document processor. 
++ * Licence details can be found in the file COPYING. 
++ * 
++ * \author Sushant Raikar 
++ * 
++*/ 
++ 
++#ifndef LFUN_HOLDER_H 
++#define LFUN_HOLDER_H 
++
++ 
++#include <vector> 
++#include <string> 
++#include <errno.h>
++#include <FuncRequest.h>
++#include <Cursor.h>
++#include <DocIterator.h>
++
++
++namespace lyx {
++
++class FuncRequest;
++/**
++ * This class provides an api for attaching and 
++ * detaching data such as version, LFUN, Cursor 
++ * etc. in order to pass it around easily.
++ */
++
++
++class LFUNHolder {
++public:
++	LFUNHolder();
++	// necessary if DocIterator is to be detached
++	LFUNHolder(Buffer * buffer);
++	~LFUNHolder();
++
++	// attach required data first and call serialize 
++	// to get serial data as a vector
++	std::vector<unsigned char> serialize();
++	// strip data from vector, call get_* (ex. get_version)
++	// after to get values
++	void unserialize(std::vector<unsigned char> const & v);
++
++	
++	// attach LFUN (funcrequest)
++	void attach_LFUN(FuncRequest cmd);
++	// detach and return LFUN
++	//LFUNHolder no longer holds LFUN
++	FuncRequest* detach_LFUN();
++	// get (not detach) data
++	bool get_LFUN(FuncRequest &);
++
++	// attach, detach, get version (state of document)
++	void attach_version(unsigned int const & ver);
++	unsigned int detach_version();
++	bool get_version(int &);
++
++	// attach, detach, get version (state of document)
++	void attach_rversion(unsigned int const & rver);
++	unsigned int detach_rversion();
++	bool get_rversion(int &);
++
++	// attach, detach, get Document Iterator
++	void attach_DocIt(DocIterator &);
++	DocIterator* detach_DocIt();
++	bool get_DocIt(DocIterator &);
++	
++	// attach, detach, get anchor
++	void attach_Anchor(DocIterator &);
++	DocIterator* detach_Anchor();
++	bool get_Anchor(DocIterator &);
++
++	// attach additional information
++	void attach_String(std::string &);
++	std::string* detach_String();
++	bool get_String(std::string &);
++
++	// Clear all data, LFUNHolder holds no data after call(resets)
++	void clear();
++
++private:
++	int prefix;
++	int version;
++	int remote_v;
++	FuncRequest * funcrequest_;
++	DocIterator * dociterator_;
++	DocIterator * anchor_;
++	std::string * string_;
++	
++};
++}
++#endif // LFUN_HOLDER_H 
+diff --git a/src/LyXAction.cpp b/src/LyXAction.cpp
+index cc782d6..644879f 100644
+--- a/src/LyXAction.cpp
++++ b/src/LyXAction.cpp
+@@ -3683,6 +3683,44 @@ void LyXAction::init()
+  * \endvar
+  */
+ 		{ LFUN_BUFFER_ZOOM_OUT, "buffer-zoom-out", ReadOnly, Buffer },
++/*!
++ * \var lyx::FuncCode lyx::LFUN_COLLABORATE_BIND
++ * \li Action: Accept connections from remote LyX instance for collaborative editing
++ * \li Syntax: connect port
++ * \li Params: <port>: The IP port where to bind
++ * \li Origin: tommaso, Jan 1st 2012
++ * \endvar
++ */
++                { LFUN_COLLABORATE_BIND, "collaborate-bind", ReadOnly, System },
++
++/*!
++ * \var lyx::FuncCode lyx::LFUN_COLLABORATE_SPEED
++ * \li Action: increases or decreases send speed
++ * \li Syntax: command +  / command -
++ * \li Params: <char>: + or -
++ * \li Origin: sushant, Jul 1st 2014
++ * \endvar
++ */
++                { LFUN_COLLABORATE_SPEED, "collaborate-speed", ReadOnly, System },
++
++/*!
++ * \var lyx::FuncCode lyx::LFUN_COLLABORATE_CONNECT
++ * \li Action: Connect to remote LyX instance for collaborative editing
++ * \li Syntax: connect host port
++ * \li Params: <host>: The host name or IP address
++ * \li Params: <port>: The IP port where to connect to
++ * \li Origin: tommaso, Jan 1st 2012
++ * \endvar
++ */
++                { LFUN_COLLABORATE_CONNECT, "collaborate-connect", ReadOnly | NoBuffer, System },
++
++/*!
++ * \var lyx::FuncCode lyx::LFUN_COLLABORATE_PULL
++ * \li Action: resets buffer to remote
++ * \li Origin: sushant, Jul 1st 2014
++ * \endvar
++ */
++                { LFUN_COLLABORATE_PULL, "collaborate-pull", Noop , System },
+ 
+ /*!
+  * \var lyx::FuncCode lyx::LFUN_INSET_COPY_AS
+diff --git a/src/Makefile.am b/src/Makefile.am
+index 17bad02..2f29972 100644
+--- a/src/Makefile.am
++++ b/src/Makefile.am
+@@ -148,6 +148,7 @@ SOURCEFILESCORE = \
+ 	Length.cpp \
+ 	lengthcommon.cpp \
+ 	Lexer.cpp \
++	LFUNHolder.cpp\	
+ 	LyX.cpp \
+ 	LyXAction.cpp \
+ 	lyxfind.cpp \
+@@ -186,7 +187,8 @@ SOURCEFILESCORE = \
+ 	VCBackend.cpp \
+ 	version.cpp \
+ 	VSpace.cpp \
+-	WordList.cpp
++	WordList.cpp\
++	moc_BufferView.cpp
+ 
+ HEADERFILESCORE = \
+ 	Author.h \
+@@ -252,6 +254,7 @@ HEADERFILESCORE = \
+ 	Lexer.h \
+ 	LyXAction.h \
+ 	lyxfind.h \
++	LFUNHolder.h\
+ 	LyX.h \
+ 	LyXRC.h \
+ 	LyXVC.h \
+@@ -316,7 +319,7 @@ endif
+ 
+ #########################  Qt stuff  ##############################
+ 
+-MOCHEADER = Compare.h
++MOCHEADER = Compare.h BufferView.h 
+ 
+ if INSTALL_WINDOWS
+ 
+diff --git a/src/Text3.cpp b/src/Text3.cpp
+index 79711f4..5f5f777 100644
+--- a/src/Text3.cpp
++++ b/src/Text3.cpp
+@@ -1252,6 +1252,7 @@ void Text::dispatch(Cursor & cur, FuncRequest & cmd)
+ 		LASSERT(cur.selBegin().idx() == cur.selEnd().idx(), break);
+ 		cap::replaceSelection(cur);
+ 
++		//LYXERR(Debug::ACTION, "Success " << cap::selection(0));
+ 		// without argument?
+ 		string const arg = to_utf8(cmd.argument());
+ 		if (arg.empty()) {
+diff --git a/src/frontends/qt4/GuiView.cpp b/src/frontends/qt4/GuiView.cpp
+index a7cbbe4..600d2dd 100644
+--- a/src/frontends/qt4/GuiView.cpp
++++ b/src/frontends/qt4/GuiView.cpp
+@@ -1611,6 +1611,7 @@ bool GuiView::getStatus(FuncRequest const & cmd, FuncStatus & flag)
+ 
+ 	switch(cmd.action()) {
+ 	case LFUN_BUFFER_IMPORT:
++	case LFUN_COLLABORATE_CONNECT: 
+ 		break;
+ 
+ 	case LFUN_MASTER_BUFFER_UPDATE:
+@@ -3816,7 +3817,20 @@ void GuiView::dispatch(FuncRequest const & cmd, DispatchResult & dr)
+ 			one.startscript(Systemcall::DontWait, command);
+ 			break;
+ 		}
+-
++		case LFUN_COLLABORATE_CONNECT: {
++                        string const & host = cmd.getArg(0);
++                        string const & port = cmd.getArg(1);
++                        SocketConnection *p_conn;
++                        if (Socket::connect(host, port, &p_conn) == 0) {
++                                lyx::dispatch(FuncRequest(LFUN_BUFFER_NEW));
++                                currentBufferView()->addRemoteBufferView(p_conn, true);
++                                currentBufferView()->buffer().changed(true);
++                                message(_("Connected to remote LyX instance"));
++                        } else {
++                                message(_("Could not connect"));
++                        }
++                }
++			break;
+ 		case LFUN_SPELLING_CONTINUOUSLY:
+ 			lyxrc.spellcheck_continuously = !lyxrc.spellcheck_continuously;
+ 			dr.screenUpdate(Update::Force | Update::FitCursor);
+diff --git a/src/support/Makefile.am b/src/support/Makefile.am
+index 52e31aa..1d414a3 100644
+--- a/src/support/Makefile.am
++++ b/src/support/Makefile.am
+@@ -90,6 +90,8 @@ liblyxsupport_a_SOURCES = \
+ 	socktools.cpp \
+ 	socktools.h \
+ 	strfwd.h \
++	Socket.cpp \ 
++ 	Socket.h \ 
+ 	Systemcall.cpp \
+ 	Systemcall.h \
+ 	SystemcallPrivate.h \
+diff --git a/src/support/Socket.cpp b/src/support/Socket.cpp
+new file mode 100644
+index 0000000..9af82d0
+--- /dev/null
++++ b/src/support/Socket.cpp
+@@ -0,0 +1,344 @@
++// -*- C++ -*-
++/**
++ * \file Socket.cpp
++ *
++ * This file is part of LyX, the document processor.
++ * Licence details can be found in the file COPYING.
++ *
++ * \author Tommaso Cucinotta
++ *
++ * Full author contact details are available in file CREDITS.
++ */
++
++#include <config.h>
++
++#include "Socket.h"
++
++#include "support/lassert.h"
++
++#include <sys/types.h>
++#include <sys/socket.h>
++#include <netdb.h>
++#include <assert.h>
++#include <string.h>
++#include <errno.h>
++#include <stdio.h>
++#include <fcntl.h>
++#include <arpa/inet.h>
++#include <unistd.h>
++
++using namespace std;
++
++
++//#define logsyserr(msg)
++#define logsyserr(msg) perror(msg)
++
++
++static int set_non_block(int fd) {
++        int flags;
++        flags = fcntl(fd, F_GETFL, 0);
++        if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0) {
++                logsyserr("fcntl() failed");
++                return -1;
++        }
++        return 0;
++}
++
++
++static int clear_non_block(int fd) {
++        int flags;
++        flags = fcntl(fd, F_GETFL, 0);
++        if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0) {
++                logsyserr("fcntl() failed");
++                return -1;
++        }
++        return 0;
++}
++
++
++Socket::Socket() {
++        sockfd = -1;
++}
++
++
++Socket::~Socket() {
++        if (sockfd != -1)
++                ::close(sockfd);
++}
++
++
++int Socket::connect(string const & host, string const & port,
++                    SocketConnection **p_pconn) {
++        struct addrinfo hint;
++        struct addrinfo *result, *rp;
++        memset(&hint, 0, sizeof(hint));
++        hint.ai_family = AF_INET;
++        hint.ai_socktype = SOCK_STREAM;
++        if (getaddrinfo(host.c_str(), port.c_str(), &hint, &result) < 0) {
++                logsyserr("getaddrinfo() failed");
++                return -1;
++        }
++        int sockfd;
++        for (rp = result; rp != NULL; rp = rp->ai_next) {
++                sockfd = socket(rp->ai_family, rp->ai_socktype,
++                                rp->ai_protocol);
++                if (sockfd == -1)
++                        continue;
++
++                if (::connect(sockfd, rp->ai_addr, rp->ai_addrlen) == 0)
++                   break;
++
++                ::close(sockfd);
++        }
++
++        if (rp == NULL) {
++                logsyserr("connect() failed");
++                freeaddrinfo(result);
++                return -1;
++        }
++
++        if (set_non_block(sockfd) < 0) {
++                ::close(sockfd);
++                return -1;
++        }
++
++        *p_pconn = new SocketConnection(sockfd);
++        return 0;
++}
++
++
++int Socket::bind(std::string const & host, std::string const & port) {
++        struct addrinfo hint;
++        struct addrinfo *result, *rp;
++        memset(&hint, 0, sizeof(hint));
++        hint.ai_family = AF_INET;
++        hint.ai_socktype = SOCK_STREAM;
++        if (getaddrinfo(host.c_str(), port.c_str(), &hint, &result) < 0) {
++                logsyserr("getaddrinfo() failed");
++                return -1;
++        }
++        for (rp = result; rp != NULL; rp = rp->ai_next) {
++                sockfd = socket(rp->ai_family, rp->ai_socktype,
++                                rp->ai_protocol);
++                if (sockfd == -1)
++                        continue;
++
++                if (::bind(sockfd, rp->ai_addr, rp->ai_addrlen) == 0)
++                   break;
++
++                ::close(sockfd);
++        }
++        if (rp == NULL) {
++                logsyserr("bind() failed");
++                freeaddrinfo(result);
++                return -1;
++        }
++
++        freeaddrinfo(result);
++
++        if (::listen(sockfd, 1024) < 0) {
++                logsyserr("listen() failed");
++                ::close(sockfd);
++                sockfd = -1;
++                return -1;
++        }
++
++        int optval = 1;
++        if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) {
++                logsyserr("setsockopt() failed");
++                ::close(sockfd);
++                sockfd = -1;
++                return -1;
++        }
++
++        if (set_non_block(sockfd) < 0) {
++                ::close(sockfd);
++                sockfd = -1;
++                return -1;
++        }
++
++        return 0;
++}
++
++
++int Socket::accept(SocketConnection **p_pconn) {
++        int fd = ::accept(sockfd, (struct sockaddr *)NULL, (socklen_t *)NULL);
++        if (fd < 0) {
++                //logsyserr("accept() failed");
++                return -1;
++        }
++        *p_pconn = new SocketConnection(fd);
++        return 0;
++}
++
++
++int Socket::close() {
++        if (sockfd == -1)
++                return -1;
++        ::close(sockfd);
++        sockfd = -1;
++        return 0;
++}
++
++
++SocketConnection::SocketConnection(int fd) : sockfd(fd) {  }
++
++
++SocketConnection::SocketConnection() {
++        sockfd = -1;
++}
++
++
++SocketConnection::~SocketConnection() {
++        if (sockfd != -1)
++                ::close(sockfd);
++}
++
++
++int SocketConnection::send_chunk(vector<unsigned char> const & v)
++{
++        if (sockfd == -1)
++                return -1;
++        clear_non_block(sockfd);
++        size_t len = v.size();
++        uint32_t data = htonl(len);
++        if (write(sockfd, &data, sizeof(data)) != sizeof(data)) {
++                logsyserr("write() failed 1");
++                return -1;
++        }
++        const unsigned char *buf = &(v[0]);
++        while (len > 0) {
++                ssize_t written = write(sockfd, buf, len);
++                if (written < 0) {
++                        logsyserr("write() failed 2");
++                        return -1;
++                }
++                len -= written;
++                buf += written;
++        }
++        LASSERT(len == 0, /**/);
++        return 0;
++}
++
++
++int SocketConnection::try_recv_chunk(vector<unsigned char> & v) {
++        if (sockfd == -1)
++                return -1;
++        if (set_non_block(sockfd) < 0)
++                return -1;
++        uint32_t msg_len;
++        ssize_t bytes_read = read(sockfd, &msg_len, sizeof(msg_len));
++        if (bytes_read < 0) {
++                if (errno == EWOULDBLOCK || errno == EAGAIN)
++                        return -EWOULDBLOCK;
++                else {
++                        logsyserr("read() failed 1");
++                        return -1;
++                }
++        }
++        if (bytes_read != sizeof(msg_len)) {
++                ::close(sockfd);
++                return -1;
++        }
++        msg_len = ntohl(msg_len);
++        printf("try_recv_chunk(): msg_len=%u\n", msg_len);
++
++        v.resize(msg_len);
++        unsigned char *buf_tmp = &(v[0]);
++        size_t left = msg_len;
++        if (clear_non_block(sockfd) < 0)
++                return -1;
++        while (left > 0) {
++                ssize_t bytes_read = read(sockfd, buf_tmp, left);
++                if (bytes_read < 0) {
++                        logsyserr("read() failed 2");
++                        return -1;
++                }
++                left -= bytes_read;
++                buf_tmp += bytes_read;
++        }
++        return 0;
++}
++
++
++int SocketConnection::send_string(string const & s) {
++        if (sockfd == -1)
++                return -1;
++        clear_non_block(sockfd);
++        const char *buf = s.c_str();
++        size_t len = s.size();
++        uint32_t data = htonl(len);
++        if (write(sockfd, &data, sizeof(data)) != sizeof(data)) {
++                logsyserr("write() failed");
++                return -1;
++        }
++        while (len > 0) {
++                ssize_t written = write(sockfd, buf, len);
++                if (written < 0) {
++                        logsyserr("write() failed");
++                        return -1;
++                }
++                len -= written;
++                buf += written;
++        }
++        return 0;
++}
++
++
++int SocketConnection::try_recv_string(string & s) {
++        if (sockfd == -1)
++                return -1;
++        if (set_non_block(sockfd) < 0)
++                return -1;
++
++        uint32_t msg_len;
++        ssize_t bytes_read = read(sockfd, &msg_len, sizeof(msg_len));
++        if (bytes_read < 0) {
++                if (errno == EWOULDBLOCK || errno == EAGAIN)
++                        return -EWOULDBLOCK;
++                else {
++                        logsyserr("read() failed 1");
++                        return -1;
++                }
++        }
++        if (bytes_read != sizeof(msg_len)) {
++                ::close(sockfd);
++                return -1;
++        }
++        msg_len = ntohl(msg_len);
++        printf("try_recv_string(): msg_len=%u\n", msg_len);
++
++        char *buf = new char[msg_len + 1];
++        if (buf == 0)
++                return -1;      //< Not enough memory!
++        size_t left = msg_len;
++        if (clear_non_block(sockfd) < 0) {
++                delete buf;
++                return -1;
++        }
++        char *buf_tmp = buf;
++        while (left > 0) {
++                ssize_t bytes_read = read(sockfd, buf_tmp, left);
++                if (bytes_read < 0) {
++                        logsyserr("read() failed 2");
++                        delete buf;
++                        return -1;
++                }
++                left -= bytes_read;
++                buf_tmp += bytes_read;
++        }
++        *buf_tmp = 0;   //< Adding null string terminator
++        s = string(buf);
++        delete buf;
++        return 0;
++}
++
++
++int SocketConnection::close() {
++        if (sockfd == -1)
++                return -1;
++        ::close(sockfd);
++        sockfd = -1;
++        return 0;
++}
++
+diff --git a/src/support/Socket.h b/src/support/Socket.h
+new file mode 100644
+index 0000000..5cd913b
+--- /dev/null
++++ b/src/support/Socket.h
+@@ -0,0 +1,59 @@
++// -*- C++ -*-
++/**
++ * \file Socket.h
++ *
++ * This file is part of LyX, the document processor.
++ * Licence details can be found in the file COPYING.
++ *
++ * \author Tommaso Cucinotta
++ *
++ * Full author contact details are available in file CREDITS.
++ */
++
++#ifndef LYX_SOCKET_H
++#define LYX_SOCKET_H
++
++#include <vector>
++#include <string>
++
++#include <errno.h>
++
++/// All int return codes are 0 for no error or negative for error
++class SocketConnection {
++public:
++        SocketConnection();
++        SocketConnection(int sockfd);
++        ~SocketConnection();
++        int close();
++
++        int send_chunk(std::vector<unsigned char> const & v);
++        int try_recv_chunk(std::vector<unsigned char> & v);
++
++        int send_string(std::string const & s);
++
++        /// Return 0 if succesfully read, -EWOULDBLOCK if it would block,
++        /// or -1 for generic socket error
++        int try_recv_string(std::string & s);
++
++private:
++        int sockfd;
++};
++
++
++class Socket {
++public:
++        Socket();
++        ~Socket();
++
++        static int connect(std::string const & host, std::string const & port,
++                           SocketConnection **p_pconn);
++        int bind(std::string const & host, std::string const & port);
++        int accept(SocketConnection **p_pconn);
++        int close();
++
++private:
++        int sockfd;
++};
++
++#endif // LYX_SOCKET_H
++
