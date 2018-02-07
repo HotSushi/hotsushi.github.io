@@ -12,7 +12,7 @@ Sorry, about the misleading title. I was so sure I wasn't going to clear this ro
 **Interviewer** | :star::star::star::star:/5
 **Time** | 45 Minutes
 **Rounds** | 1
-**Offer**  | Maybe
+**Offer**  | No
 **NDA** | No
 
 ## Mistake 1: Mind the role
