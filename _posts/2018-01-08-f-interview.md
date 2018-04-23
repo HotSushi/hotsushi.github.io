@@ -1,13 +1,12 @@
 ---
 layout: post
-title:  "What went wrong with my Facebook interview!"
+title:  "What went wrong with my F____ interview!"
 date:   2018-01-08 12:21:59 -0500
-categories: facebook interview
+categories: interview
 ---
 # Plot Twist: I cleared this Round
 Sorry, about the misleading title. I was so sure I wasn't going to clear this round, but I did. I wrote this blog on the very day of my interview, frustrated with my performance.. Enjoy the rant!
 
-**Company** | Facebook
 **Position** | Intern - Production Engineer
 **Interviewer** | :star::star::star::star:/5
 **Time** | 45 Minutes
@@ -78,7 +77,7 @@ The question descriptions were very long, I just glanced at the description and 
 
 Ok, another thing, this is something which has happened to me twice now. You know *How it is important to keep speaking as you think*, **Don't**, take time and then speak.
 
-Why? Because interviewer can ask you to code your first instinct, which may be wrong or may not be optimal. This has happened before with A9, and happened again today with Facebook.
+Why? Because interviewer can ask you to code your first instinct, which may be wrong or may not be optimal. This has happened before with A9, and happened again today with F*.
 
 So I always go like this.. "The first thing that's popping up in my mind is... blah blah blah". And for Question 2, I said "Depth First Search". The interviewer replied "Sounds good!, start coding". And then I began coding, **Without even thinking about any other solutions**, and ended up trapping myself in a corner.
 

@@ -1,8 +1,8 @@
 ---
 layout: post
-title:  "Linkedin: An infuriating interview experience"
+title:  "L___In: An infuriating interview experience"
 date:   2017-12-14 12:21:59 -0500
-categories: linkedin interview
+categories: interview
 ---
 {% include toc.html %}
 
@@ -16,7 +16,7 @@ categories: linkedin interview
   - No feedback.
   - (Oh! and I had an exam on the same day as my interview.. had to sacrifice some marks.)
 
-**Company** | Linkedin
+**Company** | L___In
 **Position** | Intern - Systems and Infrastructure Engineer
 **Interviewer** | :star::star::star::star:/5
 **Time** | 45 Minutes each
@@ -27,7 +27,7 @@ categories: linkedin interview
 
 
 ## The Position
-I am interested in the field of Distributed Systems. This was the one thing that made me break the deadlock of comfy-routine life at Directi. I took an excellent Distributed Systems course in my first term too. When I saw that Linkedin opened up the position,Systems And Infrastructure Engineer Intern, I did not hesitate asking for a favour from my friend for a referral. Linkedin, the creator of Kafka and Samza, would have given me so many opportunities to work on very interesting Distributed Systems.
+I am interested in the field of Distributed Systems. This was the one thing that made me break the deadlock of comfy-routine life at Directi. I took an excellent Distributed Systems course in my first term too. When I saw that L___In opened up the position,Systems And Infrastructure Engineer Intern, I did not hesitate asking for a favour from my friend for a referral. L___In, the creator of Kafka and Samza, would have given me so many opportunities to work on very interesting Distributed Systems.
 
 ## The Interviews
 The recruiter called me up asking me about my interests and we talked about the position. I was given a window of one week to schedule my interview. I pushed the date as much as I can, but had to place it on the day of my exam because that was the latest I could interview.
@@ -89,9 +89,9 @@ The holidays went so slowly, I was so excited.. so eager to hear the results and
 
 I contacted the recruiter back again on 3rd January, this time being explicit about the dates and I get an open ended response "There is no particular fixed date. I will let you know once the hiring committee makes the decision.". I trusted the recruiter to push my application forward.
 
-I didn't want to seem needy and keep annoying the recruiter with pesky emails, so I laid low. One week went by .. *no response*. Another week.. again *no response*. Mind you, I was expecting a positive response, so everyday I would think about Linkedin.
+I didn't want to seem needy and keep annoying the recruiter with pesky emails, so I laid low. One week went by .. *no response*. Another week.. again *no response*. Mind you, I was expecting a positive response, so everyday I would think about L___In.
 
-Then one day, I noticed (on Linkedin) that the recruiter has changed team.. she is no longer a recruiter. Surely, she would've submitted my application to the hiring committee. I sent another email immediately on 23 January, this time being even more explicit about how the interviews went good and how the position excites me and how I am still waiting to hear back.
+Then one day, I noticed (on L___In) that the recruiter has changed team.. she is no longer a recruiter. Surely, she would've submitted my application to the hiring committee. I sent another email immediately on 23 January, this time being even more explicit about how the interviews went good and how the position excites me and how I am still waiting to hear back.
 
 After two days I get a response. **From another HR**. "Unfortunately at this time, we are not able to move forward as we were not able to complete the team-matching process. I do want to thank you so much for your patience."
 
@@ -100,8 +100,6 @@ PATIENCE!!! Oh my! ... you are most definitely WELCOME!! I LOVE having to sacrif
 Just to add to the injury, I asked for some feedback about how I did in the interviews, No Response again!
 
 Needless to say this was a very infuriating experience for me and I feel disrespected.
-
-Would stay away from Linkedin in the future.
 
 ## Lesson I Learned
 - Prepare for the interview with all the efforts.

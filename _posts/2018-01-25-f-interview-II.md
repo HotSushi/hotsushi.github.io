@@ -1,11 +1,10 @@
 ---
 layout: post
-title:  "Facebook 2: Systems Round!"
+title:  "F_____ 2: Systems Round!"
 date:   2018-01-25 12:21:59 -0500
-categories: facebook systems
+categories: systems
 ---
 
-**Company** | Facebook
 **Position** | Intern - Production Engineer
 **Interviewer** | :star::star::star::star:/5
 **Time** | 45 Minutes
