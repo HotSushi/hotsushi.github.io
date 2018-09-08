@@ -16,9 +16,7 @@
 title: The Hot Sushi Journal
 email: sushantraikar123@yahoo.com
 description: >- # this means to ignore newlines until "baseurl:"
-  Sushant Raikar (HotSushi) is a Masters student at University of Waterloo
-  studying Computer Science. This website is his journal and keeps track of
-  all the projects and technologies he comes across.
+  The Hot Sushi Journal
 baseurl: "" # the subpath of your site, e.g. /blog
 url: "" # the base hostname & protocol for your site, e.g. http://example.com
 github_username:      HotSushi
