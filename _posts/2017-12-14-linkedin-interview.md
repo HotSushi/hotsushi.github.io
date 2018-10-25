@@ -16,12 +16,10 @@ categories: interview
   - No feedback.
   - (Oh! and I had an exam on the same day as my interview.. had to sacrifice some marks.)
 
-**Company** | L___In
+**Company** | L_____
 **Position** | Intern - Systems and Infrastructure Engineer
-**Interviewer** | :star::star::star::star:/5
 **Time** | 45 Minutes each
 **Rounds** | 2
-**Offer**  | No
 **NDA** | No
 
 
