@@ -6,7 +6,6 @@ categories: systems
 ---
 
 **Position** | Intern - Production Engineer
-**Interviewer** | :star::star::star::star:/5
 **Time** | 45 Minutes
 **Rounds** | 2
 **Offer**  | No
