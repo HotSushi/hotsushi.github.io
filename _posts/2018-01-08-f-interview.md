@@ -8,7 +8,6 @@ categories: interview
 Sorry, about the misleading title. I was so sure I wasn't going to clear this round, but I did. I wrote this blog on the very day of my interview, frustrated with my performance.. Enjoy the rant!
 
 **Position** | Intern - Production Engineer
-**Interviewer** | :star::star::star::star:/5
 **Time** | 45 Minutes
 **Rounds** | 1
 **Offer**  | No
