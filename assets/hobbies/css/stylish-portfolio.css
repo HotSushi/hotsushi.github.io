@@ -193,6 +193,14 @@ hr.small {
     -o-background-size: cover;
 }
 
+.cooking {
+    background: url(../img/cooking.jpg) no-repeat center center scroll;
+    -webkit-background-size: cover;
+    -moz-background-size: cover;
+    background-size: cover;
+    -o-background-size: cover;
+}
+
 .gaming {
     background: url(../img/gaming.jpg) no-repeat center center scroll;
     -webkit-background-size: cover;

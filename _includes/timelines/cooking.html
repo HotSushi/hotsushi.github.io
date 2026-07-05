@@ -1,0 +1,203 @@
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cooking</title>
+    <link href="/assets/hobbies/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/assets/hobbies/css/stylish-portfolio.css" rel="stylesheet">
+    <link href="/assets/hobbies/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+    <link href="http://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,700,300italic,400italic,700italic" rel="stylesheet" type="text/css">
+    <style>
+        .recipe-card {
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+        }
+        .recipe-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        }
+        .recipe-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+        .recipe-card-body {
+            padding: 16px 20px 20px;
+        }
+        .recipe-card-body h4 {
+            margin-top: 0;
+            margin-bottom: 6px;
+        }
+        .recipe-card-body p {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+        .recipe-meta span {
+            font-size: 12px;
+            color: #888;
+            margin-right: 14px;
+        }
+        .recipe-meta i {
+            margin-right: 4px;
+        }
+        .recipes-section {
+            background: #f9f7f4;
+            padding: 60px 0 80px;
+        }
+        .modal-recipe-img {
+            width: 100%;
+            max-height: 300px;
+            object-fit: cover;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        .modal-body h5 {
+            margin-top: 20px;
+            margin-bottom: 8px;
+            font-weight: 700;
+            font-size: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #444;
+        }
+        .modal-body ul {
+            padding-left: 18px;
+        }
+        .modal-body ol {
+            padding-left: 18px;
+        }
+        .modal-body li {
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        .header .text-vertical-center h1,
+        .header .text-vertical-center h3 {
+            color: #fff;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+        }
+        .tag {
+            display: inline-block;
+            background: #f0e9d6;
+            color: #7a5c1e;
+            border-radius: 20px;
+            padding: 2px 12px;
+            font-size: 12px;
+            margin-right: 6px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <header id="top" class="header cooking">
+        <div class="text-vertical-center">
+            <h1>Cooking</h1>
+            <h3>Recipes I love making</h3>
+            <br>
+            <a href="/hobbies/" class="btn btn-dark btn-lg">Back to Hobbies</a>
+        </div>
+    </header>
+
+    <section class="recipes-section">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-10 col-lg-offset-1">
+                    <h2 class="text-center">My Recipes</h2>
+                    <hr class="small">
+                    <div class="row" id="recipe-cards">
+
+                        <!-- Card: Spaghetti Aglio e Olio -->
+                        <div class="col-md-4">
+                            <div class="recipe-card" data-toggle="modal" data-target="#recipeModal"
+                                 data-recipe="aglio-olio">
+                                <img src="https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=600&q=80"
+                                     alt="Spaghetti Aglio e Olio">
+                                <div class="recipe-card-body">
+                                    <span class="tag">Italian</span>
+                                    <span class="tag">Pasta</span>
+                                    <h4>Spaghetti Aglio e Olio</h4>
+                                    <p>A simple classic — golden garlic, olive oil, chili flakes, and spaghetti. Ready in 20 minutes.</p>
+                                    <div class="recipe-meta">
+                                        <span><i class="fa fa-clock-o"></i>20 min</span>
+                                        <span><i class="fa fa-user"></i>Serves 2</span>
+                                        <span><i class="fa fa-bar-chart"></i>Easy</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- /Card -->
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Recipe Modal -->
+    <div class="modal fade" id="recipeModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                    <h4 class="modal-title" id="modalTitle"></h4>
+                </div>
+                <div class="modal-body" id="modalBody"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/assets/hobbies/js/jquery.js"></script>
+    <script src="/assets/hobbies/js/bootstrap.min.js"></script>
+    <script>
+        var recipes = {
+            "aglio-olio": {
+                title: "Spaghetti Aglio e Olio",
+                image: "https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=900&q=80",
+                tags: ["Italian", "Pasta", "20 min", "Easy"],
+                description: "One of Italy's most beloved pasta dishes — just a handful of pantry staples, but the technique makes all the difference. The key is toasting the garlic low and slow so it turns golden and nutty, never bitter.",
+                ingredients: [
+                    "300g spaghetti",
+                    "6 cloves garlic, thinly sliced",
+                    "80ml extra-virgin olive oil",
+                    "1 tsp red chili flakes (adjust to taste)",
+                    "A large handful of fresh parsley, roughly chopped",
+                    "Salt & black pepper",
+                    "Parmesan to serve (optional)"
+                ],
+                steps: [
+                    "Cook spaghetti in well-salted boiling water until just al dente. Reserve 1 cup of pasta water before draining.",
+                    "While pasta cooks, heat olive oil in a large skillet over medium-low. Add garlic slices and cook gently for 4–5 minutes until golden and fragrant. Don't rush this — burnt garlic will turn the dish bitter.",
+                    "Add chili flakes to the oil, stir for 30 seconds.",
+                    "Add drained pasta directly to the skillet. Add a splash of pasta water and toss vigorously to emulsify the sauce and coat every strand.",
+                    "Remove from heat, stir in parsley, and season with salt and black pepper.",
+                    "Serve immediately with a drizzle of extra olive oil and Parmesan if desired."
+                ]
+            }
+        };
+
+        $('.recipe-card').on('click', function() {
+            var key = $(this).data('recipe');
+            var r = recipes[key];
+            $('#modalTitle').text(r.title);
+            var tagsHtml = r.tags.map(function(t) { return '<span class="tag">' + t + '</span>'; }).join('');
+            var ingredientsHtml = r.ingredients.map(function(i) { return '<li>' + i + '</li>'; }).join('');
+            var stepsHtml = r.steps.map(function(s) { return '<li>' + s + '</li>'; }).join('');
+            $('#modalBody').html(
+                '<img class="modal-recipe-img" src="' + r.image + '" alt="' + r.title + '">' +
+                '<div>' + tagsHtml + '</div>' +
+                '<p>' + r.description + '</p>' +
+                '<h5>Ingredients</h5><ul>' + ingredientsHtml + '</ul>' +
+                '<h5>Steps</h5><ol>' + stepsHtml + '</ol>'
+            );
+        });
+    </script>
+
+</body>
+</html>

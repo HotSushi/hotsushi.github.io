@@ -27,6 +27,11 @@ dribbble_username:
 
 google_analytics: UA-111934517-1
 
+header_pages:
+  - about.md
+  - hobbies.md
+  - timeline.md
+
 # Build settings
 markdown: kramdown
 theme: minima
