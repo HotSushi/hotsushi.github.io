@@ -32,6 +32,11 @@ header_pages:
   - hobbies.md
   - timeline.md
 
+collections:
+  reels:
+    output: true
+    permalink: /cooking/reels/:name/
+
 # Build settings
 markdown: kramdown
 theme: minima
