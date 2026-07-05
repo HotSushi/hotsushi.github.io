@@ -1,0 +1,59 @@
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ page.title }} — Cooking</title>
+    <link href="/assets/hobbies/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/assets/hobbies/css/stylish-portfolio.css" rel="stylesheet">
+    <link href="/assets/hobbies/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+    <link href="http://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,700,300italic,400italic,700italic" rel="stylesheet" type="text/css">
+    <style>
+        body { background: #f9f7f4; margin: 0; }
+        .reel-page {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 32px 20px 60px;
+        }
+        .back-link {
+            align-self: flex-start;
+            margin-bottom: 28px;
+            font-family: 'Source Sans Pro', sans-serif;
+            color: #555;
+            text-decoration: none;
+            font-size: 15px;
+        }
+        .back-link:hover { color: #111; text-decoration: none; }
+        .back-link i { margin-right: 6px; }
+        .embed-wrap {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            justify-content: center;
+        }
+        /* Make iframes (YouTube, TikTok) responsive */
+        .embed-wrap iframe {
+            width: 100%;
+            max-width: 600px;
+            height: 340px;
+        }
+        /* Instagram blockquote full width within wrap */
+        .embed-wrap .instagram-media {
+            max-width: 100% !important;
+            width: 100% !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="reel-page">
+        <a href="/cooking/" class="back-link">
+            <i class="fa fa-arrow-left"></i> Back to Cooking
+        </a>
+        <div class="embed-wrap">
+            {{ page.embed }}
+        </div>
+    </div>
+</body>
+</html>

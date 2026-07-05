@@ -9,89 +9,106 @@
     <link href="/assets/hobbies/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
     <link href="http://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,700,300italic,400italic,700italic" rel="stylesheet" type="text/css">
     <style>
-        .recipe-card {
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            margin-bottom: 30px;
-            border-radius: 8px;
-            overflow: hidden;
-            background: #fff;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.10);
-        }
-        .recipe-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-        }
-        .recipe-card img {
-            width: 100%;
-            height: 200px;
-            object-fit: cover;
-        }
-        .recipe-card-body {
-            padding: 16px 20px 20px;
-        }
-        .recipe-card-body h4 {
-            margin-top: 0;
-            margin-bottom: 6px;
-        }
-        .recipe-card-body p {
-            color: #666;
-            font-size: 14px;
-            margin-bottom: 12px;
-        }
-        .recipe-meta span {
-            font-size: 12px;
-            color: #888;
-            margin-right: 14px;
-        }
-        .recipe-meta i {
-            margin-right: 4px;
-        }
-        .recipes-section {
-            background: #f9f7f4;
-            padding: 60px 0 80px;
-        }
-        .modal-recipe-img {
-            width: 100%;
-            max-height: 300px;
-            object-fit: cover;
-            border-radius: 6px;
-            margin-bottom: 20px;
-        }
-        .modal-body h5 {
-            margin-top: 20px;
-            margin-bottom: 8px;
-            font-weight: 700;
-            font-size: 15px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #444;
-        }
-        .modal-body ul {
-            padding-left: 18px;
-        }
-        .modal-body ol {
-            padding-left: 18px;
-        }
-        .modal-body li {
-            margin-bottom: 5px;
-            font-size: 14px;
-        }
         .header .text-vertical-center h1,
         .header .text-vertical-center h3 {
             color: #fff;
             text-shadow: 0 2px 8px rgba(0,0,0,0.6);
         }
+        .recipes-section {
+            background: #f9f7f4;
+            padding: 60px 0 80px;
+        }
+        .reel-tile {
+            display: block;
+            text-decoration: none;
+            margin: 0 auto 30px;
+            border-radius: 10px;
+            overflow: hidden;
+            width: 100%;
+            max-width: 240px;
+            aspect-ratio: 1 / 1;
+            position: relative;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .reel-tile:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.22);
+        }
+        .reel-tile-inner {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+        }
+        /* thumbnail variant */
+        .reel-tile-inner.has-thumb {
+            background-size: cover;
+            background-position: center;
+        }
+        .reel-tile-inner.has-thumb::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.35);
+        }
+        .reel-tile-inner.has-thumb .platform-icon,
+        .reel-tile-inner.has-thumb .fa-play-circle {
+            position: relative;
+            z-index: 1;
+        }
+        /* platform gradients */
+        .platform-instagram { background: linear-gradient(135deg, #405de6, #5851db, #833ab4, #c13584, #e1306c, #fd1d1d, #f56040, #f77737, #fcaf45, #ffdc80); }
+        .platform-youtube   { background: linear-gradient(135deg, #282828 0%, #ff0000 100%); }
+        .platform-tiktok    { background: linear-gradient(135deg, #010101 0%, #69c9d0 50%, #ee1d52 100%); }
+        .platform-other     { background: linear-gradient(135deg, #2c3e50 0%, #4ca1af 100%); }
+        .platform-icon {
+            font-size: 42px;
+            color: #fff;
+            line-height: 1;
+        }
+        .fa-play-circle {
+            font-size: 28px;
+            color: rgba(255,255,255,0.80);
+        }
+        .reel-title {
+            text-align: center;
+            margin-top: 12px;
+            font-family: 'Source Sans Pro', sans-serif;
+            font-size: 17px;
+            font-weight: 600;
+            color: #222;
+            letter-spacing: 0.3px;
+        }
+        .reel-tags {
+            text-align: center;
+            margin-top: 7px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 5px;
+        }
         .tag {
             display: inline-block;
-            background: #f0e9d6;
-            color: #7a5c1e;
+            padding: 3px 10px;
             border-radius: 20px;
-            padding: 2px 12px;
-            font-size: 12px;
-            margin-right: 6px;
-            margin-bottom: 10px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+            font-family: 'Source Sans Pro', sans-serif;
         }
+        /* category tags */
+        .tag-curry     { background: #fff0d6; color: #a05f00; }
+        .tag-appetizer { background: #e8f5e9; color: #2e7d32; }
+        .tag-dessert   { background: #fce4ec; color: #c62828; }
+        /* difficulty tags */
+        .tag-easy   { background: #e3f2fd; color: #1565c0; }
+        .tag-medium { background: #fff8e1; color: #f57f17; }
+        .tag-hard   { background: #fbe9e7; color: #bf360c; }
     </style>
 </head>
 <body>
@@ -108,96 +125,44 @@
     <section class="recipes-section">
         <div class="container">
             <div class="row">
-                <div class="col-lg-10 col-lg-offset-1">
-                    <h2 class="text-center">My Recipes</h2>
-                    <hr class="small">
-                    <div class="row" id="recipe-cards">
-
-                        <!-- Card: Spaghetti Aglio e Olio -->
-                        <div class="col-md-4">
-                            <div class="recipe-card" data-toggle="modal" data-target="#recipeModal"
-                                 data-recipe="aglio-olio">
-                                <img src="https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=600&q=80"
-                                     alt="Spaghetti Aglio e Olio">
-                                <div class="recipe-card-body">
-                                    <span class="tag">Italian</span>
-                                    <span class="tag">Pasta</span>
-                                    <h4>Spaghetti Aglio e Olio</h4>
-                                    <p>A simple classic — golden garlic, olive oil, chili flakes, and spaghetti. Ready in 20 minutes.</p>
-                                    <div class="recipe-meta">
-                                        <span><i class="fa fa-clock-o"></i>20 min</span>
-                                        <span><i class="fa fa-user"></i>Serves 2</span>
-                                        <span><i class="fa fa-bar-chart"></i>Easy</span>
-                                    </div>
-                                </div>
-                            </div>
+                {% for reel in site.reels %}
+                {% assign platform_class = 'platform-other' %}
+                {% assign platform_icon  = 'fa-film' %}
+                {% if reel.platform == 'instagram' %}
+                    {% assign platform_class = 'platform-instagram' %}
+                    {% assign platform_icon  = 'fa-instagram' %}
+                {% elsif reel.platform == 'youtube' %}
+                    {% assign platform_class = 'platform-youtube' %}
+                    {% assign platform_icon  = 'fa-youtube-play' %}
+                {% elsif reel.platform == 'tiktok' %}
+                    {% assign platform_class = 'platform-tiktok' %}
+                    {% assign platform_icon  = 'fa-music' %}
+                {% endif %}
+                <div class="col-xs-6 col-sm-4 col-md-3 text-center">
+                    <a href="{{ reel.url }}" class="reel-tile">
+                        {% if reel.thumbnail %}
+                        <div class="reel-tile-inner has-thumb {{ platform_class }}"
+                             style="background-image: url('{{ reel.thumbnail }}');">
+                        {% else %}
+                        <div class="reel-tile-inner {{ platform_class }}">
+                        {% endif %}
+                            <i class="fa {{ platform_icon }} platform-icon"></i>
+                            <i class="fa fa-play-circle"></i>
                         </div>
-                        <!-- /Card -->
-
+                    </a>
+                    {% if reel.title %}<div class="reel-title">{{ reel.title }}</div>{% endif %}
+                    {% if reel.tags %}
+                    <div class="reel-tags">
+                        {% for tag in reel.tags %}
+                        <span class="tag tag-{{ tag }}">{{ tag }}</span>
+                        {% endfor %}
                     </div>
+                    {% endif %}
                 </div>
+                {% endfor %}
             </div>
         </div>
     </section>
-
-    <!-- Recipe Modal -->
-    <div class="modal fade" id="recipeModal" tabindex="-1" role="dialog">
-        <div class="modal-dialog modal-lg" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
-                    <h4 class="modal-title" id="modalTitle"></h4>
-                </div>
-                <div class="modal-body" id="modalBody"></div>
-            </div>
-        </div>
-    </div>
-
-    <script src="/assets/hobbies/js/jquery.js"></script>
-    <script src="/assets/hobbies/js/bootstrap.min.js"></script>
-    <script>
-        var recipes = {
-            "aglio-olio": {
-                title: "Spaghetti Aglio e Olio",
-                image: "https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=900&q=80",
-                tags: ["Italian", "Pasta", "20 min", "Easy"],
-                description: "One of Italy's most beloved pasta dishes — just a handful of pantry staples, but the technique makes all the difference. The key is toasting the garlic low and slow so it turns golden and nutty, never bitter.",
-                ingredients: [
-                    "300g spaghetti",
-                    "6 cloves garlic, thinly sliced",
-                    "80ml extra-virgin olive oil",
-                    "1 tsp red chili flakes (adjust to taste)",
-                    "A large handful of fresh parsley, roughly chopped",
-                    "Salt & black pepper",
-                    "Parmesan to serve (optional)"
-                ],
-                steps: [
-                    "Cook spaghetti in well-salted boiling water until just al dente. Reserve 1 cup of pasta water before draining.",
-                    "While pasta cooks, heat olive oil in a large skillet over medium-low. Add garlic slices and cook gently for 4–5 minutes until golden and fragrant. Don't rush this — burnt garlic will turn the dish bitter.",
-                    "Add chili flakes to the oil, stir for 30 seconds.",
-                    "Add drained pasta directly to the skillet. Add a splash of pasta water and toss vigorously to emulsify the sauce and coat every strand.",
-                    "Remove from heat, stir in parsley, and season with salt and black pepper.",
-                    "Serve immediately with a drizzle of extra olive oil and Parmesan if desired."
-                ]
-            }
-        };
-
-        $('.recipe-card').on('click', function() {
-            var key = $(this).data('recipe');
-            var r = recipes[key];
-            $('#modalTitle').text(r.title);
-            var tagsHtml = r.tags.map(function(t) { return '<span class="tag">' + t + '</span>'; }).join('');
-            var ingredientsHtml = r.ingredients.map(function(i) { return '<li>' + i + '</li>'; }).join('');
-            var stepsHtml = r.steps.map(function(s) { return '<li>' + s + '</li>'; }).join('');
-            $('#modalBody').html(
-                '<img class="modal-recipe-img" src="' + r.image + '" alt="' + r.title + '">' +
-                '<div>' + tagsHtml + '</div>' +
-                '<p>' + r.description + '</p>' +
-                '<h5>Ingredients</h5><ul>' + ingredientsHtml + '</ul>' +
-                '<h5>Steps</h5><ol>' + stepsHtml + '</ol>'
-            );
-        });
-    </script>
 
 </body>
 </html>
