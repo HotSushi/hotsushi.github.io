@@ -1,0 +1,451 @@
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Working Out</title>
+    <link href="/assets/hobbies/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/assets/hobbies/css/stylish-portfolio.css" rel="stylesheet">
+    <link href="/assets/hobbies/font-awesome/css/font-awesome.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,700,300italic,400italic,700italic" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            background: #0a0a0a;
+            color: #e0e0e0;
+            font-family: 'Source Sans Pro', sans-serif;
+            margin: 0;
+        }
+
+        .workout-header {
+            background: #111;
+            border-bottom: 1px solid #222;
+            padding: 28px 0 24px;
+            text-align: center;
+        }
+        .workout-header h1 {
+            margin: 0 0 6px;
+            font-size: 2.6em;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 1px;
+        }
+        .workout-header p {
+            margin: 0 0 18px;
+            color: #666;
+            font-size: 15px;
+        }
+        .back-link {
+            display: inline-block;
+            color: #555;
+            text-decoration: none;
+            font-size: 14px;
+            letter-spacing: 0.5px;
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: #bbb; text-decoration: none; }
+        .back-link i { margin-right: 6px; }
+
+        .dashboard {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 36px 20px 80px;
+        }
+
+        .dashboard-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        /* Time filter bar */
+        .filter-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        .filter-bar span {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #333;
+            margin-right: 4px;
+        }
+        .filter-btn {
+            background: #141414;
+            border: 1px solid #2a2a2a;
+            color: #555;
+            font-family: 'Source Sans Pro', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            padding: 5px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .filter-btn:hover { border-color: #444; color: #aaa; }
+        .filter-btn.active {
+            background: #fff;
+            border-color: #fff;
+            color: #000;
+        }
+
+        /* Chart card */
+        .chart-card {
+            flex: 1 1 420px;
+            background: #141414;
+            border: 1px solid #222;
+            border-radius: 12px;
+            padding: 24px 28px 20px;
+            min-width: 0;
+        }
+        .chart-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .chart-card-header h3 {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #bbb;
+        }
+        .chart-card-header .latest-val {
+            font-size: 22px;
+            font-weight: 700;
+            color: #fff;
+        }
+        .chart-card-header .latest-label {
+            font-size: 11px;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            text-align: right;
+        }
+        .chart-wrap {
+            position: relative;
+            height: 220px;
+        }
+
+        /* Stat cards */
+        .stat-card {
+            flex: 1 1 160px;
+            background: #141414;
+            border: 1px solid #222;
+            border-radius: 12px;
+            padding: 20px 22px;
+            text-align: center;
+        }
+        .stat-card .stat-label {
+            font-size: 11px;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        .stat-card .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #fff;
+        }
+        .stat-card .stat-unit {
+            font-size: 13px;
+            color: #555;
+            margin-left: 2px;
+        }
+        .stat-card .stat-delta {
+            font-size: 12px;
+            margin-top: 6px;
+        }
+        .stat-card .stat-delta.down { color: #4caf7d; }
+        .stat-card .stat-delta.up   { color: #e05c5c; }
+
+        .chart-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 220px;
+            color: #444;
+            font-size: 14px;
+        }
+
+        .section-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #333;
+            margin: 0 0 16px;
+        }
+
+        @media (max-width: 600px) {
+            .chart-card, .stat-card { flex: 1 1 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="workout-header">
+        <h1>Working Out</h1>
+        <p>Tracking the grind</p>
+        <a href="/hobbies/" class="back-link"><i class="fa fa-arrow-left"></i> Back to Hobbies</a>
+    </div>
+
+    <div class="dashboard">
+
+        <!-- Stat summary -->
+        <p class="section-label">Current Stats</p>
+        <div class="dashboard-row">
+            <div class="stat-card">
+                <div class="stat-label">Latest Weight</div>
+                <div class="stat-value" id="stat-weight">—<span class="stat-unit">kg</span></div>
+                <div class="stat-delta" id="delta-weight"></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Latest Waist</div>
+                <div class="stat-value" id="stat-waist">—<span class="stat-unit">in</span></div>
+                <div class="stat-delta" id="delta-waist"></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Best Pull-ups</div>
+                <div class="stat-value" id="stat-pullups">—<span class="stat-unit">reps</span></div>
+                <div class="stat-delta" id="delta-pullups"></div>
+            </div>
+        </div>
+
+        <!-- Time filter + charts -->
+        <p class="section-label" style="margin-top:12px;">Trends</p>
+
+        <div class="filter-bar">
+            <span>Range</span>
+            <button class="filter-btn" data-days="30">30d</button>
+            <button class="filter-btn" data-days="90">3m</button>
+            <button class="filter-btn" data-days="365">1y</button>
+            <button class="filter-btn active" data-days="0">All</button>
+        </div>
+
+        <div class="dashboard-row">
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <h3>Weight</h3>
+                    <div>
+                        <div class="latest-val" id="header-weight">—</div>
+                        <div class="latest-label">kg · latest</div>
+                    </div>
+                </div>
+                <div class="chart-wrap">
+                    <div class="chart-status" id="weight-status">Loading…</div>
+                    <canvas id="weightChart" style="display:none;"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <h3>Waist</h3>
+                    <div>
+                        <div class="latest-val" id="header-waist">—</div>
+                        <div class="latest-label">in · latest</div>
+                    </div>
+                </div>
+                <div class="chart-wrap">
+                    <div class="chart-status" id="waist-status">Loading…</div>
+                    <canvas id="waistChart" style="display:none;"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-row">
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <h3>Consecutive Pull-ups</h3>
+                    <div>
+                        <div class="latest-val" id="header-pullups">—</div>
+                        <div class="latest-label">reps · latest</div>
+                    </div>
+                </div>
+                <div class="chart-wrap">
+                    <div class="chart-status" id="pullups-status">Loading…</div>
+                    <canvas id="pullupsChart" style="display:none;"></canvas>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="/assets/js/sheet-config.js"></script>
+    <script>
+    (function () {
+        if (!window.SHEET_ID) {
+            ['weight-status', 'waist-status', 'pullups-status'].forEach(function(id) {
+                document.getElementById(id).textContent = 'Sheet not configured.';
+            });
+            return;
+        }
+
+        function sheetUrl(tab) {
+            return 'https://docs.google.com/spreadsheets/d/' + window.SHEET_ID + '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent(tab);
+        }
+
+        // Global store: raw data and chart instances
+        var allData = {};
+        var charts  = {};
+
+        var CHART_CONFIG = {
+            weight:  { canvasId: 'weightChart',  statusId: 'weight-status',  color: 'rgba(99,179,237,1)',   unit: 'kg',   higherIsBetter: false },
+            waist:   { canvasId: 'waistChart',   statusId: 'waist-status',   color: 'rgba(154,230,180,1)',  unit: 'in',   higherIsBetter: false },
+            pullups: { canvasId: 'pullupsChart', statusId: 'pullups-status', color: 'rgba(251,191,36,1)',   unit: 'reps', higherIsBetter: true  }
+        };
+
+        function parseCSV(text) {
+            return text.trim().split('\n').slice(1).map(function(row) {
+                var cols = row.split(',').map(function(c) { return c.replace(/"/g,'').trim(); });
+                return { date: cols[0], value: parseFloat(cols[1]) };
+            }).filter(function(r) { return r.date && !isNaN(r.value); });
+        }
+
+        function filterByDays(rows, days) {
+            if (!days) return rows;
+            var cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - days);
+            return rows.filter(function(r) { return new Date(r.date) >= cutoff; });
+        }
+
+        function toPoints(rows) {
+            return rows.map(function(r) { return { x: r.date, y: r.value }; });
+        }
+
+        function makeOptions(color) {
+            return {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 300 },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#1e1e1e',
+                        titleColor: '#888',
+                        bodyColor: '#fff',
+                        borderColor: '#333',
+                        borderWidth: 1,
+                        callbacks: {
+                            title: function(items) { return items[0].label.split(',')[0]; }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            tooltipFormat: 'MMM d, yyyy',
+                            displayFormats: { day: 'MMM d', week: 'MMM d', month: 'MMM yyyy', year: 'yyyy' }
+                        },
+                        ticks: { color: '#444', font: { size: 11 }, maxTicksLimit: 7 },
+                        grid: { color: '#1c1c1c' }
+                    },
+                    y: {
+                        ticks: { color: '#444', font: { size: 11 } },
+                        grid: { color: '#1c1c1c' }
+                    }
+                }
+            };
+        }
+
+        function makeDataset(points, color) {
+            return {
+                data: points,
+                borderColor: color,
+                backgroundColor: color.replace('1)', '0.07)'),
+                borderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                pointBackgroundColor: color,
+                fill: true,
+                tension: 0.3
+            };
+        }
+
+        function drawChart(key, rows) {
+            var cfg = CHART_CONFIG[key];
+            var canvas = document.getElementById(cfg.canvasId);
+            document.getElementById(cfg.statusId).style.display = 'none';
+            canvas.style.display = 'block';
+            var points = toPoints(rows);
+            if (charts[key]) { charts[key].destroy(); }
+            charts[key] = new Chart(canvas, {
+                type: 'line',
+                data: { datasets: [makeDataset(points, cfg.color)] },
+                options: makeOptions(cfg.color)
+            });
+        }
+
+        function applyFilter(days) {
+            Object.keys(allData).forEach(function(key) {
+                if (!charts[key]) return;
+                var filtered = filterByDays(allData[key], days);
+                charts[key].data.datasets[0].data = toPoints(filtered);
+                charts[key].update();
+            });
+        }
+
+        // Filter button wiring
+        var activeDays = 0;
+        document.querySelectorAll('.filter-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+                btn.classList.add('active');
+                activeDays = parseInt(btn.dataset.days);
+                applyFilter(activeDays);
+            });
+        });
+
+        function renderDelta(elId, rows, unit, higherIsBetter) {
+            if (rows.length < 2) return;
+            var d = (rows[rows.length-1].value - rows[rows.length-2].value).toFixed(1);
+            var num = parseFloat(d);
+            var el = document.getElementById(elId);
+            el.textContent = (num > 0 ? '+' : '') + d + ' ' + unit + ' vs prev';
+            var good = higherIsBetter ? num > 0 : num < 0;
+            el.className = 'stat-delta ' + (good ? 'down' : num === 0 ? '' : 'up');
+        }
+
+        function load(tab, key, headerValId, statValId, deltaId) {
+            var cfg = CHART_CONFIG[key];
+            fetch(sheetUrl(tab))
+                .then(function(r) { return r.text(); })
+                .then(function(text) {
+                    var rows = parseCSV(text);
+                    if (!rows.length) throw new Error('No data');
+
+                    // Always keep all-time stats in summary cards
+                    var latest = rows[rows.length-1].value;
+                    document.getElementById(headerValId).textContent = latest;
+                    document.getElementById(statValId).innerHTML = latest + '<span class="stat-unit">' + cfg.unit + '</span>';
+                    renderDelta(deltaId, rows, cfg.unit, cfg.higherIsBetter);
+
+                    // Store full dataset, draw with active filter
+                    allData[key] = rows;
+                    drawChart(key, filterByDays(rows, activeDays));
+                })
+                .catch(function() {
+                    document.getElementById(cfg.statusId).textContent = 'Could not load data.';
+                });
+        }
+
+        load('Weight',  'weight',  'header-weight',  'stat-weight',  'delta-weight');
+        load('Waist',   'waist',   'header-waist',   'stat-waist',   'delta-waist');
+        load('Pullups', 'pullups', 'header-pullups', 'stat-pullups', 'delta-pullups');
+    })();
+    </script>
+
+</body>
+</html>
