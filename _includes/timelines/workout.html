@@ -306,11 +306,30 @@
             pullups: { canvasId: 'pullupsChart', statusId: 'pullups-status', color: 'rgba(251,191,36,1)',   unit: 'reps', higherIsBetter: true  }
         };
 
-        function parseCSV(text) {
+        // Parses "M/D/YYYY HH:MM:SS" → "YYYY-MM-DD"
+        function parseTimestamp(ts) {
+            var parts = ts.split(' ')[0].split('/');
+            if (parts.length !== 3) return ts;
+            var m = parts[0].padStart(2,'0'), d = parts[1].padStart(2,'0'), y = parts[2];
+            return y + '-' + m + '-' + d;
+        }
+
+        // Returns { date, weight, waist, pullups } per row
+        function parseFormCSV(text) {
             return text.trim().split('\n').slice(1).map(function(row) {
                 var cols = row.split(',').map(function(c) { return c.replace(/"/g,'').trim(); });
-                return { date: cols[0], value: parseFloat(cols[1]) };
-            }).filter(function(r) { return r.date && !isNaN(r.value); });
+                return {
+                    date:    parseTimestamp(cols[0]),
+                    weight:  parseFloat(cols[1]),
+                    waist:   parseFloat(cols[2]),
+                    pullups: parseFloat(cols[3])
+                };
+            }).filter(function(r) { return r.date; });
+        }
+
+        function extractMetric(rows, key) {
+            return rows.map(function(r) { return { date: r.date, value: r[key] }; })
+                       .filter(function(r) { return !isNaN(r.value); });
         }
 
         function filterByDays(rows, days) {
@@ -418,32 +437,35 @@
             el.className = 'stat-delta ' + (good ? 'down' : num === 0 ? '' : 'up');
         }
 
-        function load(tab, key, headerValId, statValId, deltaId) {
+        function loadMetric(rows, key, headerValId, statValId, deltaId) {
             var cfg = CHART_CONFIG[key];
-            fetch(sheetUrl(tab))
-                .then(function(r) { return r.text(); })
-                .then(function(text) {
-                    var rows = parseCSV(text);
-                    if (!rows.length) throw new Error('No data');
-
-                    // Always keep all-time stats in summary cards
-                    var latest = rows[rows.length-1].value;
-                    document.getElementById(headerValId).textContent = latest;
-                    document.getElementById(statValId).innerHTML = latest + '<span class="stat-unit">' + cfg.unit + '</span>';
-                    renderDelta(deltaId, rows, cfg.unit, cfg.higherIsBetter);
-
-                    // Store full dataset, draw with active filter
-                    allData[key] = rows;
-                    drawChart(key, filterByDays(rows, activeDays));
-                })
-                .catch(function() {
-                    document.getElementById(cfg.statusId).textContent = 'Could not load data.';
-                });
+            var metricRows = extractMetric(rows, key);
+            if (!metricRows.length) {
+                document.getElementById(cfg.statusId).textContent = 'No data.';
+                return;
+            }
+            var latest = metricRows[metricRows.length-1].value;
+            document.getElementById(headerValId).textContent = latest;
+            document.getElementById(statValId).innerHTML = latest + '<span class="stat-unit">' + cfg.unit + '</span>';
+            renderDelta(deltaId, metricRows, cfg.unit, cfg.higherIsBetter);
+            allData[key] = metricRows;
+            drawChart(key, filterByDays(metricRows, activeDays));
         }
 
-        load('Weight',  'weight',  'header-weight',  'stat-weight',  'delta-weight');
-        load('Waist',   'waist',   'header-waist',   'stat-waist',   'delta-waist');
-        load('Pullups', 'pullups', 'header-pullups', 'stat-pullups', 'delta-pullups');
+        fetch(sheetUrl('Form'))
+            .then(function(r) { return r.text(); })
+            .then(function(text) {
+                var rows = parseFormCSV(text);
+                if (!rows.length) throw new Error('No data');
+                loadMetric(rows, 'weight',  'header-weight',  'stat-weight',  'delta-weight');
+                loadMetric(rows, 'waist',   'header-waist',   'stat-waist',   'delta-waist');
+                loadMetric(rows, 'pullups', 'header-pullups', 'stat-pullups', 'delta-pullups');
+            })
+            .catch(function() {
+                ['weight-status','waist-status','pullups-status'].forEach(function(id) {
+                    document.getElementById(id).textContent = 'Could not load data.';
+                });
+            });
     })();
     </script>
 
