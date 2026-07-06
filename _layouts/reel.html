@@ -27,6 +27,35 @@
         }
         .back-link:hover { color: #111; text-decoration: none; }
         .back-link i { margin-right: 6px; }
+        .notes-section {
+            width: 100%;
+            max-width: 600px;
+            margin-top: 32px;
+            background: #fffdf5;
+            border-left: 4px solid #f0a500;
+            border-radius: 6px;
+            padding: 18px 24px;
+        }
+        .notes-section h3 {
+            margin: 0 0 12px;
+            font-family: 'Source Sans Pro', sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: #a06800;
+        }
+        .notes-section ul {
+            margin: 0;
+            padding-left: 18px;
+        }
+        .notes-section li {
+            font-family: 'Source Sans Pro', sans-serif;
+            font-size: 15px;
+            color: #444;
+            margin-bottom: 6px;
+            line-height: 1.5;
+        }
         .embed-wrap {
             width: 100%;
             max-width: 600px;
@@ -54,6 +83,16 @@
         <div class="embed-wrap">
             {{ page.embed }}
         </div>
+        {% if page.notes %}
+        <div class="notes-section">
+            <h3>My Notes</h3>
+            <ul>
+                {% for note in page.notes %}
+                <li>{{ note }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
     </div>
 </body>
 </html>

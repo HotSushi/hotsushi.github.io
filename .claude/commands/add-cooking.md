@@ -13,8 +13,9 @@ The tile and detail page are driven entirely by the front matter in the reel fil
 1. **Embed code** — "Paste the embed code (YouTube iframe, Instagram blockquote, TikTok iframe, or any other platform)"
 2. **Dish name** — "What's the dish called?"
 3. **Tags** — "How would you tag it?" (see taxonomy below — pick one from each group)
+4. **Notes** — "Any personal tips or notes for this dish?" (optional — shown as bullet points under "My Notes" on the detail page)
 
-If any answer is missing, ask before proceeding.
+If embed code, dish name, or tags are missing, ask before proceeding. Notes are optional.
 
 ## Step 2 — Determine the platform
 
@@ -46,6 +47,9 @@ title: <Dish Name>
 platform: <instagram|youtube|tiktok|other>
 thumbnail: /assets/hobbies/img/<slug>.jpg
 tags: [<category>, <difficulty>]
+notes:                        # optional — omit if no notes
+  - "tip one"
+  - "tip two"
 embed: |
   <paste the full embed code here, indented by 2 spaces>
 ---
@@ -93,3 +97,4 @@ git push "https://${PAT}@github.com/HotSushi/hotsushi.github.io.git" master
 |---|---|---|---|
 | `_reels/DZc50UHIW4o.md` | Chicken Karahi | instagram | curry, medium |
 | `_reels/WnfzPwgPUro.md` | Lehsuni Malai Eggs | youtube | appetizer, curry, easy |
+| `_reels/tTVFYyGFr_4.md` | Chicken Shorba | youtube | curry, easy |
