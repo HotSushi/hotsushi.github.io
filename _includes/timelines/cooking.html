@@ -113,8 +113,9 @@
 
         /* ── Filter bar ── */
         .filter-bar-section {
-            background: #111;
-            padding: 28px 0 24px;
+            background: #f9f7f4;
+            padding: 22px 0 26px;
+            border-bottom: 1px solid #e8e3dd;
         }
         .filter-bar-inner {
             max-width: 860px;
@@ -122,12 +123,12 @@
             padding: 0 24px;
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 14px;
         }
         .filter-row {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 16px;
             flex-wrap: wrap;
         }
         .filter-row-label {
@@ -136,42 +137,58 @@
             font-weight: 700;
             letter-spacing: 2px;
             text-transform: uppercase;
-            color: #444;
+            color: #b0a89e;
             width: 72px;
             flex-shrink: 0;
         }
-        .filter-pills {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
+
+        /* segmented slider track */
+        .seg-track {
+            position: relative;
+            display: inline-flex;
+            background: #ede8e2;
+            border-radius: 999px;
+            padding: 4px;
         }
-        .fpill {
-            display: inline-block;
-            padding: 6px 16px;
+        .seg-thumb {
+            position: absolute;
+            top: 4px;
+            bottom: 4px;
+            background: #fff;
+            border-radius: 999px;
+            box-shadow: 0 1px 6px rgba(0,0,0,0.13);
+            transition: left 0.22s cubic-bezier(0.4,0,0.2,1),
+                        width 0.22s cubic-bezier(0.4,0,0.2,1);
+            pointer-events: none;
+        }
+        .seg-option {
+            position: relative;
+            z-index: 1;
+            padding: 6px 18px;
+            border: none;
+            background: transparent;
             border-radius: 999px;
             font-family: 'Source Sans Pro', sans-serif;
             font-size: 12px;
             font-weight: 700;
-            letter-spacing: 0.6px;
+            letter-spacing: 0.5px;
             text-transform: uppercase;
+            color: #b0a89e;
             cursor: pointer;
-            border: 1.5px solid #2a2a2a;
-            background: #1a1a1a;
-            color: #555;
-            transition: all 0.18s ease;
-            user-select: none;
+            transition: color 0.18s;
+            white-space: nowrap;
+            line-height: 1;
         }
-        .fpill:hover { border-color: #444; color: #aaa; }
-
-        /* active states — one per tag value */
-        .fpill.active-all        { background: #fff;    border-color: #fff;    color: #111; }
-        .fpill.active-very-easy  { background: #1b5e20; border-color: #1b5e20; color: #fff; box-shadow: 0 0 12px rgba(27,94,32,0.45); }
-        .fpill.active-easy       { background: #1565c0; border-color: #1565c0; color: #fff; box-shadow: 0 0 12px rgba(21,101,192,0.45); }
-        .fpill.active-medium     { background: #f57f17; border-color: #f57f17; color: #fff; box-shadow: 0 0 12px rgba(245,127,23,0.45); }
-        .fpill.active-hard       { background: #bf360c; border-color: #bf360c; color: #fff; box-shadow: 0 0 12px rgba(191,54,12,0.45); }
-        .fpill.active-appetizer  { background: #2e7d32; border-color: #2e7d32; color: #fff; box-shadow: 0 0 12px rgba(46,125,50,0.45); }
-        .fpill.active-curry      { background: #a05f00; border-color: #a05f00; color: #fff; box-shadow: 0 0 12px rgba(160,95,0,0.45); }
-        .fpill.active-dessert    { background: #c62828; border-color: #c62828; color: #fff; box-shadow: 0 0 12px rgba(198,40,40,0.45); }
+        .seg-option:hover { color: #666; }
+        /* active colours per value */
+        .seg-option.active[data-value="all"]        { color: #333; }
+        .seg-option.active[data-value="very-easy"]  { color: #1b5e20; }
+        .seg-option.active[data-value="easy"]       { color: #1565c0; }
+        .seg-option.active[data-value="medium"]     { color: #e65100; }
+        .seg-option.active[data-value="hard"]       { color: #bf360c; }
+        .seg-option.active[data-value="appetizer"]  { color: #2e7d32; }
+        .seg-option.active[data-value="curry"]      { color: #a05f00; }
+        .seg-option.active[data-value="dessert"]    { color: #c62828; }
 
         /* tile hide animation */
         .reel-item {
@@ -201,21 +218,23 @@
         <div class="filter-bar-inner">
             <div class="filter-row">
                 <span class="filter-row-label">Difficulty</span>
-                <div class="filter-pills" id="difficulty-pills">
-                    <span class="fpill active-all" data-filter="difficulty" data-value="all">All</span>
-                    <span class="fpill" data-filter="difficulty" data-value="very-easy">Very Easy</span>
-                    <span class="fpill" data-filter="difficulty" data-value="easy">Easy</span>
-                    <span class="fpill" data-filter="difficulty" data-value="medium">Medium</span>
-                    <span class="fpill" data-filter="difficulty" data-value="hard">Hard</span>
+                <div class="seg-track" id="difficulty-track">
+                    <div class="seg-thumb" id="difficulty-thumb"></div>
+                    <button class="seg-option active" data-filter="difficulty" data-value="all">All</button>
+                    <button class="seg-option" data-filter="difficulty" data-value="very-easy">Very Easy</button>
+                    <button class="seg-option" data-filter="difficulty" data-value="easy">Easy</button>
+                    <button class="seg-option" data-filter="difficulty" data-value="medium">Medium</button>
+                    <button class="seg-option" data-filter="difficulty" data-value="hard">Hard</button>
                 </div>
             </div>
             <div class="filter-row">
                 <span class="filter-row-label">Category</span>
-                <div class="filter-pills" id="category-pills">
-                    <span class="fpill active-all" data-filter="category" data-value="all">All</span>
-                    <span class="fpill" data-filter="category" data-value="appetizer">Appetizer</span>
-                    <span class="fpill" data-filter="category" data-value="curry">Curry</span>
-                    <span class="fpill" data-filter="category" data-value="dessert">Dessert</span>
+                <div class="seg-track" id="category-track">
+                    <div class="seg-thumb" id="category-thumb"></div>
+                    <button class="seg-option active" data-filter="category" data-value="all">All</button>
+                    <button class="seg-option" data-filter="category" data-value="appetizer">Appetizer</button>
+                    <button class="seg-option" data-filter="category" data-value="curry">Curry</button>
+                    <button class="seg-option" data-filter="category" data-value="dessert">Dessert</button>
                 </div>
             </div>
         </div>
@@ -267,32 +286,44 @@
     (function () {
         var active = { difficulty: 'all', category: 'all' };
 
+        function positionThumb(track, thumb, activeBtn) {
+            thumb.style.left  = activeBtn.offsetLeft + 'px';
+            thumb.style.width = activeBtn.offsetWidth + 'px';
+        }
+
+        function initTrack(trackId, thumbId) {
+            var track = document.getElementById(trackId);
+            var thumb = document.getElementById(thumbId);
+            var firstActive = track.querySelector('.seg-option.active');
+            if (firstActive) positionThumb(track, thumb, firstActive);
+
+            track.querySelectorAll('.seg-option').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var group = btn.dataset.filter;
+                    var val   = btn.dataset.value;
+                    active[group] = val;
+
+                    track.querySelectorAll('.seg-option').forEach(function (b) {
+                        b.classList.remove('active');
+                    });
+                    btn.classList.add('active');
+                    positionThumb(track, thumb, btn);
+                    applyFilters();
+                });
+            });
+        }
+
         function applyFilters() {
             document.querySelectorAll('.reel-item').forEach(function (item) {
-                var tags = (item.dataset.tags || '').split(' ');
+                var tags  = (item.dataset.tags || '').split(' ');
                 var diffOk = active.difficulty === 'all' || tags.indexOf(active.difficulty) !== -1;
-                var catOk  = active.category  === 'all' || tags.indexOf(active.category)  !== -1;
+                var catOk  = active.category   === 'all' || tags.indexOf(active.category)  !== -1;
                 item.classList.toggle('filtered-out', !(diffOk && catOk));
             });
         }
 
-        document.querySelectorAll('.fpill').forEach(function (pill) {
-            pill.addEventListener('click', function () {
-                var group = pill.dataset.filter;
-                var val   = pill.dataset.value;
-                active[group] = val;
-
-                // update active class within this group
-                document.querySelectorAll('.fpill[data-filter="' + group + '"]').forEach(function (p) {
-                    p.className = 'fpill';
-                    if (p.dataset.value === val) {
-                        p.classList.add('active-' + val);
-                    }
-                });
-
-                applyFilters();
-            });
-        });
+        initTrack('difficulty-track', 'difficulty-thumb');
+        initTrack('category-track',   'category-thumb');
     })();
     </script>
 
