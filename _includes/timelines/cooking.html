@@ -110,6 +110,80 @@
         .tag-easy   { background: #e3f2fd; color: #1565c0; }
         .tag-medium { background: #fff8e1; color: #f57f17; }
         .tag-hard   { background: #fbe9e7; color: #bf360c; }
+
+        /* ── Filter bar ── */
+        .filter-bar-section {
+            background: #111;
+            padding: 28px 0 24px;
+        }
+        .filter-bar-inner {
+            max-width: 860px;
+            margin: 0 auto;
+            padding: 0 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .filter-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .filter-row-label {
+            font-family: 'Source Sans Pro', sans-serif;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #444;
+            width: 72px;
+            flex-shrink: 0;
+        }
+        .filter-pills {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .fpill {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 999px;
+            font-family: 'Source Sans Pro', sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+            cursor: pointer;
+            border: 1.5px solid #2a2a2a;
+            background: #1a1a1a;
+            color: #555;
+            transition: all 0.18s ease;
+            user-select: none;
+        }
+        .fpill:hover { border-color: #444; color: #aaa; }
+
+        /* active states — one per tag value */
+        .fpill.active-all        { background: #fff;    border-color: #fff;    color: #111; }
+        .fpill.active-very-easy  { background: #1b5e20; border-color: #1b5e20; color: #fff; box-shadow: 0 0 12px rgba(27,94,32,0.45); }
+        .fpill.active-easy       { background: #1565c0; border-color: #1565c0; color: #fff; box-shadow: 0 0 12px rgba(21,101,192,0.45); }
+        .fpill.active-medium     { background: #f57f17; border-color: #f57f17; color: #fff; box-shadow: 0 0 12px rgba(245,127,23,0.45); }
+        .fpill.active-hard       { background: #bf360c; border-color: #bf360c; color: #fff; box-shadow: 0 0 12px rgba(191,54,12,0.45); }
+        .fpill.active-appetizer  { background: #2e7d32; border-color: #2e7d32; color: #fff; box-shadow: 0 0 12px rgba(46,125,50,0.45); }
+        .fpill.active-curry      { background: #a05f00; border-color: #a05f00; color: #fff; box-shadow: 0 0 12px rgba(160,95,0,0.45); }
+        .fpill.active-dessert    { background: #c62828; border-color: #c62828; color: #fff; box-shadow: 0 0 12px rgba(198,40,40,0.45); }
+
+        /* tile hide animation */
+        .reel-item {
+            transition: opacity 0.25s ease, transform 0.25s ease;
+        }
+        .reel-item.filtered-out {
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.95);
+            position: absolute;
+            visibility: hidden;
+        }
     </style>
 </head>
 <body>
@@ -123,9 +197,33 @@
         </div>
     </header>
 
+    <div class="filter-bar-section">
+        <div class="filter-bar-inner">
+            <div class="filter-row">
+                <span class="filter-row-label">Difficulty</span>
+                <div class="filter-pills" id="difficulty-pills">
+                    <span class="fpill active-all" data-filter="difficulty" data-value="all">All</span>
+                    <span class="fpill" data-filter="difficulty" data-value="very-easy">Very Easy</span>
+                    <span class="fpill" data-filter="difficulty" data-value="easy">Easy</span>
+                    <span class="fpill" data-filter="difficulty" data-value="medium">Medium</span>
+                    <span class="fpill" data-filter="difficulty" data-value="hard">Hard</span>
+                </div>
+            </div>
+            <div class="filter-row">
+                <span class="filter-row-label">Category</span>
+                <div class="filter-pills" id="category-pills">
+                    <span class="fpill active-all" data-filter="category" data-value="all">All</span>
+                    <span class="fpill" data-filter="category" data-value="appetizer">Appetizer</span>
+                    <span class="fpill" data-filter="category" data-value="curry">Curry</span>
+                    <span class="fpill" data-filter="category" data-value="dessert">Dessert</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <section class="recipes-section">
         <div class="container">
-            <div class="row">
+            <div class="row" id="reels-grid">
                 {% for reel in site.reels %}
                 {% assign platform_class = 'platform-other' %}
                 {% assign platform_icon  = 'fa-film' %}
@@ -139,7 +237,7 @@
                     {% assign platform_class = 'platform-tiktok' %}
                     {% assign platform_icon  = 'fa-music' %}
                 {% endif %}
-                <div class="col-xs-6 col-sm-4 col-md-3 text-center">
+                <div class="col-xs-6 col-sm-4 col-md-3 text-center reel-item" data-tags="{{ reel.tags | join: ' ' }}">
                     <a href="{{ reel.url }}" class="reel-tile">
                         {% if reel.thumbnail %}
                         <div class="reel-tile-inner has-thumb {{ platform_class }}"
@@ -164,6 +262,39 @@
             </div>
         </div>
     </section>
+
+    <script>
+    (function () {
+        var active = { difficulty: 'all', category: 'all' };
+
+        function applyFilters() {
+            document.querySelectorAll('.reel-item').forEach(function (item) {
+                var tags = (item.dataset.tags || '').split(' ');
+                var diffOk = active.difficulty === 'all' || tags.indexOf(active.difficulty) !== -1;
+                var catOk  = active.category  === 'all' || tags.indexOf(active.category)  !== -1;
+                item.classList.toggle('filtered-out', !(diffOk && catOk));
+            });
+        }
+
+        document.querySelectorAll('.fpill').forEach(function (pill) {
+            pill.addEventListener('click', function () {
+                var group = pill.dataset.filter;
+                var val   = pill.dataset.value;
+                active[group] = val;
+
+                // update active class within this group
+                document.querySelectorAll('.fpill[data-filter="' + group + '"]').forEach(function (p) {
+                    p.className = 'fpill';
+                    if (p.dataset.value === val) {
+                        p.classList.add('active-' + val);
+                    }
+                });
+
+                applyFilters();
+            });
+        });
+    })();
+    </script>
 
 </body>
 </html>
