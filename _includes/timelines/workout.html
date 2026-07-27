@@ -226,6 +226,11 @@
                 <div class="stat-value" id="stat-fat">—<span class="stat-unit">mm</span></div>
                 <div class="stat-delta" id="delta-fat"></div>
             </div>
+            <div class="stat-card">
+                <div class="stat-label">Run in 1 Hour</div>
+                <div class="stat-value" id="stat-miles">—<span class="stat-unit">mi</span></div>
+                <div class="stat-delta" id="delta-miles"></div>
+            </div>
         </div>
 
         <!-- Time filter + charts -->
@@ -299,13 +304,29 @@
             </div>
         </div>
 
+        <div class="dashboard-row">
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <h3>Miles Run in 1 Hour</h3>
+                    <div>
+                        <div class="latest-val" id="header-miles">—</div>
+                        <div class="latest-label">mi · latest</div>
+                    </div>
+                </div>
+                <div class="chart-wrap">
+                    <div class="chart-status" id="miles-status">Loading…</div>
+                    <canvas id="milesChart" style="display:none;"></canvas>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script src="/assets/js/sheet-config.js"></script>
     <script>
     (function () {
         if (!window.SHEET_ID) {
-            ['weight-status', 'waist-status', 'pullups-status', 'fat-status'].forEach(function(id) {
+            ['weight-status', 'waist-status', 'pullups-status', 'fat-status', 'miles-status'].forEach(function(id) {
                 document.getElementById(id).textContent = 'Sheet not configured.';
             });
             return;
@@ -323,7 +344,8 @@
             weight:  { canvasId: 'weightChart',  statusId: 'weight-status',  color: 'rgba(99,179,237,1)',   unit: 'kg',   higherIsBetter: false },
             waist:   { canvasId: 'waistChart',   statusId: 'waist-status',   color: 'rgba(154,230,180,1)',  unit: 'in',   higherIsBetter: false },
             pullups: { canvasId: 'pullupsChart', statusId: 'pullups-status', color: 'rgba(251,191,36,1)',   unit: 'reps', higherIsBetter: true  },
-            fat:     { canvasId: 'fatChart',     statusId: 'fat-status',     color: 'rgba(249,115,148,1)',  unit: 'mm',   higherIsBetter: false }
+            fat:     { canvasId: 'fatChart',     statusId: 'fat-status',     color: 'rgba(249,115,148,1)',  unit: 'mm',   higherIsBetter: false },
+            miles:   { canvasId: 'milesChart',   statusId: 'miles-status',   color: 'rgba(167,139,250,1)',  unit: 'mi',   higherIsBetter: true  }
         };
 
         // Parses "M/D/YYYY HH:MM:SS" → "YYYY-MM-DD"
@@ -343,7 +365,8 @@
                     weight:  parseFloat(cols[1]),
                     waist:   parseFloat(cols[2]),
                     pullups: parseFloat(cols[3]),
-                    fat:     parseFloat(cols[4])
+                    fat:     parseFloat(cols[4]),
+                    miles:   parseFloat(cols[5])
                 };
             }).filter(function(r) { return r.date; });
         }
@@ -482,9 +505,10 @@
                 loadMetric(rows, 'waist',   'header-waist',   'stat-waist',   'delta-waist');
                 loadMetric(rows, 'pullups', 'header-pullups', 'stat-pullups', 'delta-pullups');
                 loadMetric(rows, 'fat',     'header-fat',     'stat-fat',     'delta-fat');
+                loadMetric(rows, 'miles',   'header-miles',   'stat-miles',   'delta-miles');
             })
             .catch(function() {
-                ['weight-status','waist-status','pullups-status','fat-status'].forEach(function(id) {
+                ['weight-status','waist-status','pullups-status','fat-status','miles-status'].forEach(function(id) {
                     document.getElementById(id).textContent = 'Could not load data.';
                 });
             });
