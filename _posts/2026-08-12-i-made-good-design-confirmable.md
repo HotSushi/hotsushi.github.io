@@ -20,7 +20,7 @@ So this time I tried something different. Instead of chasing "better," I turned 
 
 I sat down with Claude Code, but I didn't ask it to "make it pretty." I handed it a stack of opinionated design skills and gave it a job: grade what I had, commit to a direction, and then keep grading its own work until it hit a bar I set.
 
-The audit came from [taste-skill](https://www.tasteskill.dev/). It scored my site across six dimensions: distinctiveness, typography, color, hierarchy, motion, and craft. My first attempt came back at **3.8 out of 10**, with a blunt, itemized list of every generic pattern it was leaning on. It stung, but it was fair, and more importantly it was *specific*. I finally had a number, and a list of exactly why it was low.
+The audit came from **redesign-skill**, one of the pieces in the [taste-skill](https://www.tasteskill.dev/) collection. It scored my site across six dimensions: distinctiveness, typography, color, hierarchy, motion, and craft. My first attempt came back at **3.8 out of 10**, with a blunt, itemized list of every generic pattern it was leaning on. It stung, but it was fair, and more importantly it was *specific*. I finally had a number, and a list of exactly why it was low.
 
 That was the whole unlock. "Good design" had quietly become confirmable.
 
@@ -28,7 +28,7 @@ That was the whole unlock. "Good design" had quietly become confirmable.
 
 What surprised me is that the skills weren't magic paintbrushes. They were opinions and rubrics, each good at one narrow thing:
 
-- [**taste-skill**](https://www.tasteskill.dev/) was the rater and the enhancer. It set the six-dimension rubric that turned "better" into a number, and it kept me honest every round.
+- [**taste-skill**](https://www.tasteskill.dev/) was the rater and the enhancer, and it's really a small family of skills. The shared six-dimension rubric is what turned "better" into a number and kept me honest every round. Its [**redesign-skill**](https://www.tasteskill.dev/) ran the audit-first pass that handed me the brutal 3.8, and its [**soft-skill**](https://www.tasteskill.dev/) added the calmer, expensive feel: the whitespace, the softer contrast, the sense of real depth.
 - [**impeccable**](https://github.com/pbakaus/impeccable) scrubbed off the "AI smell." It comes with a craft floor and a little detector that mechanically flags the tells, and it's the thing that caught my eyebrow labels and my emoji-as-icons and made me earn every element.
 - [**Emil Kowalski's design engineering skill**](https://github.com/emilkowalski/skills) owned motion, with one rule I kept coming back to: an animation has to *explain* something, not just wiggle.
 - Anthropic's shipped [**frontend-design**](https://github.com/anthropics/skills/tree/main/skills) skill forced an actual point of view. It named the obvious AI defaults out loud and refused to use them, then committed to a single, distinctive direction instead of the safe one.
