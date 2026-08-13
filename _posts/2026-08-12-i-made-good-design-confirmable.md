@@ -12,9 +12,9 @@ The real problem wasn't the colors. It was that "make it look better" is a terri
 
 So this time I tried something different. Instead of chasing "better," I turned good design into a number I could measure, and then chase.
 
-![Left: my first attempt, a dark page with a single green accent. Right: the redesign, a lighter, more composed layout. Text is intentionally blurred.]({{ "/assets/design-rater/landing-before-after.png" | absolute_url }})
+![Left: my first attempt, a dark page with a single green accent. Right: the redesign, a lighter, more composed layout. The words are intentionally scrambled.]({{ "/assets/design-rater/landing-before-after.png" | absolute_url }})
 
-*(Same landing page, first attempt on the left and the final on the right. I've blurred the words on purpose; the point here is the craft, not the copy.)*
+*(Same landing page, first attempt on the left and the final on the right. I've jumbled the actual words on purpose; the point here is the craft, not the copy.)*
 
 ## Getting a score I trusted
 
