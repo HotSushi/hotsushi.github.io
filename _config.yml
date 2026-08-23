@@ -36,6 +36,8 @@ collections:
   reels:
     output: true
     permalink: /cooking/reels/:name/
+  games:
+    output: false
 
 # Build settings
 markdown: kramdown
